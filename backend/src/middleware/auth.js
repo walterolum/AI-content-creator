@@ -5,11 +5,12 @@ function authenticate(req, res, next) {
   const authHeader = req.headers.authorization
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    console.log('Auth: No token provided')
     return res.status(401).json({ message: 'No token provided' })
   }
 
-  // In production, verify the JWT with Supabase
-  // For now, mock the user
+  // For development, accept any token and mock the user
+  // In production, verify with Supabase
   req.user = {
     id: 'mock-user-id',
     email: 'user@example.com',

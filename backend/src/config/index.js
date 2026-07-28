@@ -7,6 +7,9 @@ module.exports = {
     url: process.env.SUPABASE_URL,
     serviceKey: process.env.SUPABASE_SERVICE_KEY,
   },
+  google: {
+    apiKey: process.env.GOOGLE_AI_API_KEY,
+  },
   openai: {
     apiKey: process.env.OPENAI_API_KEY,
   },
