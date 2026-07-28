@@ -3,8 +3,8 @@ import { useForm } from 'react-hook-form'
 import { motion } from 'framer-motion'
 import {
   Wand2, Sparkles, Copy, Save, RefreshCw, Download,
-  FileText, Image, Film, Music, Play, Pause, Upload,
-  Volume2, Video, Mic, Camera, Square
+  FileText, Film, Music, Play, Pause, Upload,
+  Volume2, Video, Mic, Square, Settings
 } from 'lucide-react'
 import Button from '../ui/Button'
 import Select from '../ui/Select'
@@ -13,8 +13,14 @@ import Card from '../ui/Card'
 import FileUpload from '../ui/FileUpload'
 import { useToast } from '../../contexts/ToastContext'
 import { streamAI } from '../../lib/api'
-import { speak, stopSpeech, pauseSpeech, resumeSpeech, isSpeaking, isPaused, voiceProfiles, getAvailableVoices } from '../../lib/audio'
-import { generateVideo, downloadVideo, createVideoUrl } from '../../lib/video'
+import {
+  speak, stopSpeech, pauseSpeech, resumeSpeech,
+  isSpeaking, isPaused, voiceProfiles
+} from '../../lib/audio'
+import {
+  generateCinematicVideo, generateBackgroundMusic,
+  audioBufferToBlob, createVideoUrl
+} from '../../lib/video'
 
 const businessTypes = [
   { value: 'restaurant', label: 'Restaurant' },
@@ -105,14 +111,16 @@ export default function GeneratorForm() {
   const [generatedContent, setGeneratedContent] = useState('')
   const [isGenerating, setIsGenerating] = useState(false)
   const [showDownloads, setShowDownloads] = useState(false)
-  const [selectedVoice, setSelectedVoice] = useState('professional-male')
+  const [selectedVoice, setSelectedVoice] = useState('cinematic-male')
   const [speaking, setSpeaking] = useState(false)
   const [paused, setPaused] = useState(false)
+  const [withMusic, setWithMusic] = useState(true)
   const [uploadedFiles, setUploadedFiles] = useState([])
   const [activeTab, setActiveTab] = useState('content')
   const [videoUrl, setVideoUrl] = useState(null)
   const [isGeneratingVideo, setIsGeneratingVideo] = useState(false)
   const [showVideo, setShowVideo] = useState(false)
+  const [videoProgress, setVideoProgress] = useState(0)
   const videoRef = useRef(null)
   const { addToast } = useToast()
 
@@ -133,7 +141,6 @@ export default function GeneratorForm() {
 
   const watchedPlatform = watch('platform')
 
-  // Monitor speaking state
   useEffect(() => {
     const interval = setInterval(() => {
       setSpeaking(isSpeaking())
@@ -175,7 +182,6 @@ export default function GeneratorForm() {
     addToast('Copied to clipboard!', 'success')
   }
 
-  // Audio controls
   const handlePlayPause = () => {
     if (speaking) {
       if (paused) {
@@ -184,11 +190,12 @@ export default function GeneratorForm() {
         pauseSpeech()
       }
     } else {
-      speak(generatedContent, selectedVoice, () => {
+      speak(generatedContent, selectedVoice, withMusic, () => {
         setSpeaking(false)
         setPaused(false)
       })
       setSpeaking(true)
+      addToast(`Playing with ${voiceProfiles.find(v => v.id === selectedVoice)?.name} voice`, 'info')
     }
   }
 
@@ -198,7 +205,6 @@ export default function GeneratorForm() {
     setPaused(false)
   }
 
-  // Video generation
   const handleGenerateVideo = async () => {
     if (!generatedContent) {
       addToast('Generate content first', 'error')
@@ -206,10 +212,16 @@ export default function GeneratorForm() {
     }
 
     setIsGeneratingVideo(true)
-    addToast('Generating video...', 'info')
+    setVideoProgress(0)
+    addToast('Creating cinematic video...', 'info')
+
+    // Simulate progress
+    const progressInterval = setInterval(() => {
+      setVideoProgress(prev => Math.min(prev + 5, 90))
+    }, 200)
 
     try {
-      const blob = await generateVideo(generatedContent, watchedPlatform || 'instagram', {
+      const blob = await generateCinematicVideo(generatedContent, watchedPlatform || 'instagram', {
         duration: 15000,
         width: 1080,
         height: 1920,
@@ -217,12 +229,14 @@ export default function GeneratorForm() {
       const url = createVideoUrl(blob)
       setVideoUrl(url)
       setShowVideo(true)
-      addToast('Video generated! Click play to preview.', 'success')
+      setVideoProgress(100)
+      addToast('Cinematic video ready! Click play to watch.', 'success')
     } catch (error) {
       addToast('Failed to generate video', 'error')
       console.error('Video generation error:', error)
     } finally {
       setIsGeneratingVideo(false)
+      clearInterval(progressInterval)
     }
   }
 
@@ -230,11 +244,29 @@ export default function GeneratorForm() {
     if (videoUrl) {
       const a = document.createElement('a')
       a.href = videoUrl
-      a.download = `content-video-${watchedPlatform || 'social'}.webm`
+      a.download = `cinematic-${watchedPlatform || 'social'}-video.webm`
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)
       addToast('Video downloaded!', 'success')
+    }
+  }
+
+  const handleDownloadMusic = () => {
+    try {
+      const buffer = generateBackgroundMusic(15)
+      const blob = audioBufferToBlob(buffer)
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'background-music.wav'
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+      addToast('Background music downloaded!', 'success')
+    } catch (error) {
+      addToast('Failed to generate music', 'error')
     }
   }
 
@@ -263,7 +295,6 @@ export default function GeneratorForm() {
         const json = JSON.stringify({
           content: generatedContent,
           platform: watchedPlatform,
-          uploadedFiles: uploadedFiles.map(f => ({ name: f.name, type: f.type })),
           date: new Date().toISOString()
         }, null, 2)
         downloadFile(json, `${filename}.json`, 'application/json')
@@ -277,7 +308,7 @@ export default function GeneratorForm() {
   const tabs = [
     { id: 'content', label: 'Content', icon: FileText },
     { id: 'media', label: 'Upload Media', icon: Upload },
-    { id: 'audio', label: 'Audio', icon: Music },
+    { id: 'audio', label: 'Voice & Audio', icon: Music },
     { id: 'video', label: 'Video', icon: Film },
   ]
 
@@ -357,37 +388,8 @@ export default function GeneratorForm() {
               {...register('additionalInfo')}
             />
 
-            {/* Image Upload Section */}
             {activeTab === 'media' && (
               <FileUpload onFilesChange={setUploadedFiles} maxFiles={5} />
-            )}
-
-            {/* Voice Selection */}
-            {activeTab === 'audio' && (
-              <div className="space-y-3">
-                <label className="block text-sm font-medium text-secondary-700 dark:text-secondary-300">
-                  Select Advertising Voice
-                </label>
-                <div className="grid grid-cols-2 gap-2">
-                  {voiceProfiles.map((voice) => (
-                    <button
-                      key={voice.id}
-                      type="button"
-                      onClick={() => setSelectedVoice(voice.id)}
-                      className={`p-3 rounded-lg border-2 text-left transition-all ${
-                        selectedVoice === voice.id
-                          ? 'border-primary-500 bg-primary-50 dark:bg-primary-950'
-                          : 'border-secondary-200 dark:border-secondary-700 hover:border-secondary-300'
-                      }`}
-                    >
-                      <p className={`text-sm font-medium ${selectedVoice === voice.id ? 'text-primary-600' : 'text-secondary-900 dark:text-white'}`}>
-                        {voice.name}
-                      </p>
-                      <p className="text-xs text-secondary-500 mt-0.5">{voice.description}</p>
-                    </button>
-                  ))}
-                </div>
-              </div>
             )}
 
             <Button type="submit" className="w-full" size="lg" disabled={isGenerating}>
@@ -433,10 +435,10 @@ export default function GeneratorForm() {
                       <button onClick={() => handleDownload('html')} className="w-full px-3 py-2 text-left text-sm hover:bg-secondary-50 dark:hover:bg-secondary-800 flex items-center gap-2">
                         <FileText className="w-4 h-4" /> Download HTML
                       </button>
-                      <button onClick={() => handleDownload('json')} className="w-full px-3 py-2 text-left text-sm hover:bg-secondary-50 dark:hover:bg-secondary-800 flex items-center gap-2">
-                        <FileText className="w-4 h-4" /> Download JSON
-                      </button>
                       <div className="border-t border-secondary-200 dark:border-secondary-700 my-1" />
+                      <button onClick={handleDownloadMusic} className="w-full px-3 py-2 text-left text-sm hover:bg-secondary-50 dark:hover:bg-secondary-800 flex items-center gap-2">
+                        <Music className="w-4 h-4" /> Download Music
+                      </button>
                       <button onClick={handleGenerateVideo} className="w-full px-3 py-2 text-left text-sm hover:bg-secondary-50 dark:hover:bg-secondary-800 flex items-center gap-2">
                         <Video className="w-4 h-4" /> Generate Video
                       </button>
@@ -472,83 +474,139 @@ export default function GeneratorForm() {
             )}
           </div>
 
-          {/* Audio Player - Professional Voice */}
+          {/* Professional Voice Player */}
           {generatedContent && (
-            <div className="mt-4 p-4 bg-gradient-to-r from-primary-50 to-primary-100 dark:from-primary-950 dark:to-primary-900 rounded-lg border border-primary-200 dark:border-primary-800">
-              <div className="flex items-center gap-3 mb-3">
-                <Mic className="w-5 h-5 text-primary-600" />
-                <p className="text-sm font-semibold text-primary-900 dark:text-primary-100">Professional Voice Preview</p>
+            <div className="mt-4 p-5 bg-gradient-to-br from-gray-900 via-gray-800 to-black rounded-xl border border-gray-700">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-r from-amber-500 to-orange-600 flex items-center justify-center">
+                  <Mic className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-white tracking-wide">CINEMATIC VOICEOVER</p>
+                  <p className="text-xs text-gray-400">Professional advertising voice with background music</p>
+                </div>
               </div>
 
               {/* Voice Selection */}
               <select
                 value={selectedVoice}
                 onChange={(e) => setSelectedVoice(e.target.value)}
-                className="w-full mb-3 p-2 rounded-lg border border-primary-200 dark:border-primary-700 bg-white dark:bg-secondary-800 text-sm"
+                className="w-full mb-3 p-3 rounded-lg bg-gray-800 border border-gray-600 text-white text-sm focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
               >
                 {voiceProfiles.map(voice => (
-                  <option key={voice.id} value={voice.id}>{voice.name} - {voice.description}</option>
+                  <option key={voice.id} value={voice.id}>
+                    {voice.name} - {voice.description}
+                  </option>
                 ))}
               </select>
 
+              {/* Music Toggle */}
+              <div className="flex items-center gap-3 mb-4 p-3 bg-gray-800/50 rounded-lg">
+                <button
+                  type="button"
+                  onClick={() => setWithMusic(!withMusic)}
+                  className={`w-12 h-6 rounded-full transition-colors ${withMusic ? 'bg-amber-500' : 'bg-gray-600'}`}
+                >
+                  <div className={`w-5 h-5 rounded-full bg-white shadow transition-transform ${withMusic ? 'translate-x-6' : 'translate-x-0.5'}`} />
+                </button>
+                <div>
+                  <p className="text-sm font-medium text-white">Background Music</p>
+                  <p className="text-xs text-gray-400">Ambient cinematic soundtrack</p>
+                </div>
+                <Music className={`w-5 h-5 ml-auto ${withMusic ? 'text-amber-500' : 'text-gray-500'}`} />
+              </div>
+
               {/* Audio Controls */}
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3">
                 <button
                   onClick={handlePlayPause}
-                  className="w-12 h-12 rounded-full bg-primary-600 flex items-center justify-center hover:bg-primary-700 transition-colors"
+                  className="w-14 h-14 rounded-full bg-gradient-to-r from-amber-500 to-orange-600 flex items-center justify-center hover:from-amber-600 hover:to-orange-700 transition-all shadow-lg shadow-amber-500/30"
                 >
                   {speaking ? (
-                    paused ? <Play className="w-5 h-5 text-white ml-0.5" /> : <Pause className="w-5 h-5 text-white" />
+                    paused ? <Play className="w-6 h-6 text-white ml-1" /> : <Pause className="w-6 h-6 text-white" />
                   ) : (
-                    <Play className="w-5 h-5 text-white ml-0.5" />
+                    <Play className="w-6 h-6 text-white ml-1" />
                   )}
                 </button>
                 <button
                   onClick={handleStop}
-                  className="w-10 h-10 rounded-full bg-secondary-200 dark:bg-secondary-700 flex items-center justify-center hover:bg-secondary-300 transition-colors"
+                  className="w-12 h-12 rounded-full bg-gray-700 flex items-center justify-center hover:bg-gray-600 transition-colors"
                 >
-                  <Square className="w-4 h-4 text-secondary-600 dark:text-secondary-300" />
+                  <Square className="w-5 h-5 text-white" />
                 </button>
                 <div className="flex-1 ml-2">
-                  <p className="text-sm font-medium text-primary-900 dark:text-primary-100">
-                    {speaking ? (paused ? 'Paused' : 'Playing...') : 'Ready to play'}
+                  <p className="text-sm font-semibold text-white">
+                    {speaking ? (paused ? 'PAUSED' : 'PLAYING...') : 'READY'}
                   </p>
-                  <p className="text-xs text-primary-600 dark:text-primary-400">
-                    No hashtags or emojis • Professional {voiceProfiles.find(v => v.id === selectedVoice)?.name}
+                  <p className="text-xs text-gray-400">
+                    {voiceProfiles.find(v => v.id === selectedVoice)?.name}
+                    {withMusic && ' + Music'}
                   </p>
                 </div>
-                <Volume2 className="w-5 h-5 text-primary-400" />
+                <Volume2 className="w-5 h-5 text-amber-500" />
               </div>
             </div>
           )}
 
-          {/* Video Player */}
+          {/* Video Generator */}
           {generatedContent && (
-            <div className="mt-4 p-4 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950 dark:to-pink-950 rounded-lg border border-purple-200 dark:border-purple-800">
-              <div className="flex items-center gap-2 mb-3">
-                <Video className="w-5 h-5 text-purple-600" />
-                <p className="text-sm font-semibold text-purple-900 dark:text-purple-100">Video Generator</p>
+            <div className="mt-4 p-5 bg-gradient-to-br from-purple-900 via-pink-900 to-red-900 rounded-xl border border-purple-700">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-r from-purple-500 to-pink-600 flex items-center justify-center">
+                  <Film className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-white tracking-wide">CINEMATIC VIDEO</p>
+                  <p className="text-xs text-purple-200">Professional video with moving visuals and effects</p>
+                </div>
               </div>
 
               {!showVideo ? (
                 <div>
-                  <p className="text-xs text-purple-600 dark:text-purple-400 mb-3">
-                    Generate an animated video for {watchedPlatform || 'social media'} with your content.
-                  </p>
+                  <div className="grid grid-cols-3 gap-2 mb-4">
+                    <div className="p-2 bg-white/10 rounded-lg text-center">
+                      <p className="text-xs text-purple-200">Duration</p>
+                      <p className="text-sm font-bold text-white">15 sec</p>
+                    </div>
+                    <div className="p-2 bg-white/10 rounded-lg text-center">
+                      <p className="text-xs text-purple-200">Resolution</p>
+                      <p className="text-sm font-bold text-white">1080x1920</p>
+                    </div>
+                    <div className="p-2 bg-white/10 rounded-lg text-center">
+                      <p className="text-xs text-purple-200">Platform</p>
+                      <p className="text-sm font-bold text-white capitalize">{watchedPlatform || 'Instagram'}</p>
+                    </div>
+                  </div>
+
+                  {isGeneratingVideo && (
+                    <div className="mb-4">
+                      <div className="flex justify-between text-xs text-purple-200 mb-1">
+                        <span>Generating cinematic video...</span>
+                        <span>{videoProgress}%</span>
+                      </div>
+                      <div className="w-full bg-white/20 rounded-full h-2">
+                        <div
+                          className="bg-gradient-to-r from-purple-400 to-pink-400 h-2 rounded-full transition-all duration-300"
+                          style={{ width: `${videoProgress}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
+
                   <Button
                     onClick={handleGenerateVideo}
                     disabled={isGeneratingVideo}
-                    className="bg-purple-600 hover:bg-purple-700"
+                    className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
                   >
                     {isGeneratingVideo ? (
                       <>
                         <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                        Creating Video...
+                        Creating Cinematic Video...
                       </>
                     ) : (
                       <>
                         <Film className="w-4 h-4 mr-2" />
-                        Generate Video
+                        Generate Cinematic Video
                       </>
                     )}
                   </Button>
@@ -559,16 +617,18 @@ export default function GeneratorForm() {
                     ref={videoRef}
                     src={videoUrl}
                     controls
-                    className="w-full max-w-xs mx-auto rounded-lg shadow-lg"
-                    style={{ maxHeight: '400px' }}
+                    autoPlay
+                    loop
+                    className="w-full max-w-[280px] mx-auto rounded-xl shadow-2xl border-2 border-purple-500"
+                    style={{ maxHeight: '500px' }}
                   />
                   <div className="flex gap-2 justify-center">
-                    <Button onClick={handleDownloadVideo} variant="outline" size="sm">
+                    <Button onClick={handleDownloadVideo} className="bg-gradient-to-r from-purple-600 to-pink-600" size="sm">
                       <Download className="w-4 h-4 mr-2" />
                       Download Video
                     </Button>
-                    <Button onClick={() => { setShowVideo(false); setVideoUrl(null) }} variant="ghost" size="sm">
-                      Generate New
+                    <Button onClick={() => { setShowVideo(false); setVideoUrl(null) }} variant="ghost" size="sm" className="text-white">
+                      New Video
                     </Button>
                   </div>
                 </div>

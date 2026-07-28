@@ -1,6 +1,6 @@
-// Video Generator using Canvas API - Creates actual playable videos
+// Cinematic Video Generator with Moving Visuals and Professional Audio
 
-// Parse content into sections
+// Parse content into structured sections
 function parseContent(text) {
   const sections = {
     hook: '',
@@ -29,27 +29,98 @@ function parseContent(text) {
 
   return {
     hook: sections.hook.trim() || 'Check this out!',
-    caption: sections.caption.trim() || text.substring(0, 200),
+    caption: sections.caption.trim() || text.substring(0, 300),
     cta: sections.cta.trim() || 'Follow for more!',
   }
 }
 
-// Video color schemes
-const colorSchemes = {
-  instagram: { bg: ['#833AB4', '#FD1D1D', '#F77737'], text: '#FFFFFF' },
-  tiktok: { bg: ['#000000', '#69C9D0', '#EE1D52'], text: '#FFFFFF' },
-  facebook: { bg: ['#1877F2', '#42B72A', '#F7B928'], text: '#FFFFFF' },
-  linkedin: { bg: ['#0077B5', '#00A0DC', '#5BA0D9'], text: '#FFFFFF' },
-  x: { bg: ['#1DA1F2', '#14171A', '#657786'], text: '#FFFFFF' },
-  threads: { bg: ['#000000', '#333333', '#666666'], text: '#FFFFFF' },
+// Clean text for display (remove emojis, hashtags)
+function cleanText(text) {
+  return text
+    .replace(/[\u{1F600}-\u{1F64F}]/gu, '')
+    .replace(/[\u{1F300}-\u{1F5FF}]/gu, '')
+    .replace(/[\u{1F680}-\u{1F6FF}]/gu, '')
+    .replace(/[\u{2600}-\u{26FF}]/gu, '')
+    .replace(/[\u{2700}-\u{27BF}]/gu, '')
+    .replace(/#\w+/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
 }
 
-// Create animated video using Canvas
-export async function generateVideo(content, platform = 'instagram', options = {}) {
+// Cinematic color palettes
+const cinematicPalettes = {
+  instagram: {
+    primary: ['#833AB4', '#C13584', '#E1306C'],
+    secondary: ['#FD1D1D', '#F77737', '#FCAF45'],
+    accent: '#FFD700',
+    text: '#FFFFFF',
+    shadow: 'rgba(0,0,0,0.8)',
+  },
+  tiktok: {
+    primary: ['#00F2EA', '#FF0050', '#000000'],
+    secondary: ['#69C9D0', '#EE1D52', '#161823'],
+    accent: '#00F2EA',
+    text: '#FFFFFF',
+    shadow: 'rgba(0,0,0,0.9)',
+  },
+  facebook: {
+    primary: ['#1877F2', '#42B72A', '#F7B928'],
+    secondary: ['#0064E0', '#36A420', '#F5C518'],
+    accent: '#1877F2',
+    text: '#FFFFFF',
+    shadow: 'rgba(0,0,0,0.7)',
+  },
+  linkedin: {
+    primary: ['#0077B5', '#00A0DC', '#5BA0D9'],
+    secondary: ['#005E93', '#0093D0', '#4A90C4'],
+    accent: '#0077B5',
+    text: '#FFFFFF',
+    shadow: 'rgba(0,0,0,0.7)',
+  },
+  x: {
+    primary: ['#1DA1F2', '#14171A', '#657786'],
+    secondary: ['#1A91DA', '#2C3640', '#8899A6'],
+    accent: '#1DA1F2',
+    text: '#FFFFFF',
+    shadow: 'rgba(0,0,0,0.8)',
+  },
+  threads: {
+    primary: ['#000000', '#282828', '#4A4A4A'],
+    secondary: ['#1A1A1A', '#333333', '#5C5C5C'],
+    accent: '#FFFFFF',
+    text: '#FFFFFF',
+    shadow: 'rgba(0,0,0,0.9)',
+  },
+}
+
+// Particle system
+class Particle {
+  constructor(width, height) {
+    this.x = Math.random() * width
+    this.y = Math.random() * height
+    this.size = Math.random() * 4 + 1
+    this.speedX = (Math.random() - 0.5) * 3
+    this.speedY = (Math.random() - 0.5) * 3
+    this.opacity = Math.random() * 0.5 + 0.2
+    this.life = Math.random() * 100
+  }
+
+  update(width, height) {
+    this.x += this.speedX
+    this.y += this.speedY
+    this.life += 0.5
+
+    if (this.x < 0 || this.x > width) this.speedX *= -1
+    if (this.y < 0 || this.y > height) this.speedY *= -1
+  }
+}
+
+// Create cinematic video with moving visuals
+export async function generateCinematicVideo(content, platform = 'instagram', options = {}) {
   const {
-    duration = 15000, // 15 seconds
+    duration = 20000,
     width = 1080,
-    height = 1920, // Vertical video
+    height = 1920,
     fps = 30,
   } = options
 
@@ -59,13 +130,14 @@ export async function generateVideo(content, platform = 'instagram', options = {
   const ctx = canvas.getContext('2d')
 
   const sections = parseContent(content)
-  const colors = colorSchemes[platform] || colorSchemes.instagram
+  const palette = cinematicPalettes[platform] || cinematicPalettes.instagram
+  const particles = Array.from({ length: 50 }, () => new Particle(width, height))
 
   // Create video stream
   const stream = canvas.captureStream(fps)
   const mediaRecorder = new MediaRecorder(stream, {
     mimeType: 'video/webm;codecs=vp9',
-    videoBitsPerSecond: 5000000,
+    videoBitsPerSecond: 8000000,
   })
 
   const chunks = []
@@ -75,13 +147,11 @@ export async function generateVideo(content, platform = 'instagram', options = {
 
   const videoBlob = await new Promise((resolve) => {
     mediaRecorder.onstop = () => {
-      const blob = new Blob(chunks, { type: 'video/webm' })
-      resolve(blob)
+      resolve(new Blob(chunks, { type: 'video/webm' }))
     }
 
     mediaRecorder.start()
 
-    // Animation frames
     const totalFrames = Math.floor((duration / 1000) * fps)
     let frame = 0
 
@@ -92,58 +162,28 @@ export async function generateVideo(content, platform = 'instagram', options = {
       }
 
       const progress = frame / totalFrames
-      const time = (frame / fps) * 1000
+      const time = frame / fps
 
-      // Clear canvas
-      ctx.clearRect(0, 0, width, height)
+      // Clear with gradient background
+      drawCinematicBackground(ctx, width, height, progress, time, palette)
 
-      // Draw gradient background
-      const gradient = ctx.createLinearGradient(0, 0, width, height)
-      colors.bg.forEach((color, i) => {
-        gradient.addColorStop(i / (colors.bg.length - 1), color)
+      // Draw animated particles
+      particles.forEach(p => {
+        p.update(width, height)
+        drawParticle(ctx, p, palette, progress)
       })
-      ctx.fillStyle = gradient
-      ctx.fillRect(0, 0, width, height)
 
-      // Add animated particles
-      drawParticles(ctx, width, height, progress, frame)
+      // Draw light rays
+      drawLightRays(ctx, width, height, progress, time, palette)
 
-      // Draw content based on time
-      ctx.textAlign = 'center'
-      ctx.textBaseline = 'middle'
-
-      if (progress < 0.3) {
-        // Hook phase - large text with animation
-        const scale = 1 + Math.sin(progress * 10) * 0.05
-        ctx.save()
-        ctx.translate(width / 2, height / 2)
-        ctx.scale(scale, scale)
-        drawTextWithShadow(ctx, sections.hook, 0, 0, 72, colors.text, width * 0.8)
-        ctx.restore()
-      } else if (progress < 0.8) {
-        // Caption phase
-        const alpha = Math.min(1, (progress - 0.3) * 5)
-        ctx.globalAlpha = alpha
-        drawWrappedText(ctx, sections.caption, width / 2, height * 0.3, 48, colors.text, width * 0.85)
-        ctx.globalAlpha = 1
-      } else {
-        // CTA phase - with pulse animation
-        const pulse = 1 + Math.sin(progress * 20) * 0.1
-        ctx.save()
-        ctx.translate(width / 2, height * 0.7)
-        ctx.scale(pulse, pulse)
-        drawTextWithShadow(ctx, sections.cta, 0, 0, 64, '#FFD700', width * 0.8)
-        ctx.restore()
-      }
+      // Draw content based on phase
+      drawCinematicContent(ctx, width, height, progress, sections, palette, time)
 
       // Draw progress bar
-      ctx.fillStyle = 'rgba(255,255,255,0.3)'
-      ctx.fillRect(50, height - 100, width - 100, 8)
-      ctx.fillStyle = '#FFFFFF'
-      ctx.fillRect(50, height - 100, (width - 100) * progress, 8)
+      drawProgressBar(ctx, width, height, progress, palette)
 
-      // Draw platform logo placeholder
-      drawPlatformBadge(ctx, platform, width - 150, 100)
+      // Draw platform badge
+      drawPlatformBadge(ctx, platform, width - 160, 80, palette)
 
       frame++
       requestAnimationFrame(animate)
@@ -155,59 +195,158 @@ export async function generateVideo(content, platform = 'instagram', options = {
   return videoBlob
 }
 
-// Draw animated particles
-function drawParticles(ctx, width, height, progress, frame) {
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.1)'
-  for (let i = 0; i < 20; i++) {
-    const x = (Math.sin(i * 0.5 + frame * 0.02) + 1) * width / 2
-    const y = (Math.cos(i * 0.7 + frame * 0.015) + 1) * height / 2
-    const size = 5 + Math.sin(i + frame * 0.05) * 3
-    ctx.beginPath()
-    ctx.arc(x, y, size, 0, Math.PI * 2)
-    ctx.fill()
-  }
-}
+// Draw cinematic background with Ken Burns effect
+function drawCinematicBackground(ctx, width, height, progress, time, palette) {
+  // Animated gradient
+  const gradient = ctx.createRadialGradient(
+    width / 2 + Math.sin(time * 0.5) * 200,
+    height / 2 + Math.cos(time * 0.3) * 200,
+    0,
+    width / 2,
+    height / 2,
+    width
+  )
 
-// Draw text with shadow
-function drawTextWithShadow(ctx, text, x, y, size, color, maxWidth) {
-  ctx.font = `bold ${size}px Arial, sans-serif`
-  ctx.shadowColor = 'rgba(0, 0, 0, 0.5)'
-  ctx.shadowBlur = 10
-  ctx.shadowOffsetX = 2
-  ctx.shadowOffsetY = 2
-
-  // Word wrap
-  const words = text.split(' ')
-  let line = ''
-  const lines = []
-
-  for (const word of words) {
-    const testLine = line + word + ' '
-    const metrics = ctx.measureText(testLine)
-    if (metrics.width > maxWidth && line) {
-      lines.push(line.trim())
-      line = word + ' '
-    } else {
-      line = testLine
-    }
-  }
-  lines.push(line.trim())
-
-  const lineHeight = size * 1.3
-  const startY = y - ((lines.length - 1) * lineHeight) / 2
-
-  ctx.fillStyle = color
-  lines.forEach((l, i) => {
-    ctx.fillText(l, x, startY + i * lineHeight)
+  palette.primary.forEach((color, i) => {
+    gradient.addColorStop(i / (palette.primary.length - 1), color)
   })
 
-  ctx.shadowColor = 'transparent'
+  ctx.fillStyle = gradient
+  ctx.fillRect(0, 0, width, height)
+
+  // Animated mesh/pattern
+  ctx.strokeStyle = `rgba(255,255,255,0.03)`
+  ctx.lineWidth = 1
+
+  for (let i = 0; i < 20; i++) {
+    ctx.beginPath()
+    const offset = Math.sin(time + i * 0.5) * 50
+    ctx.moveTo(0, (height / 20) * i + offset)
+    ctx.bezierCurveTo(
+      width * 0.3, (height / 20) * i + offset + 30,
+      width * 0.7, (height / 20) * i + offset - 30,
+      width, (height / 20) * i + offset
+    )
+    ctx.stroke()
+  }
 }
 
-// Draw wrapped text
-function drawWrappedText(ctx, text, x, y, size, color, maxWidth) {
-  ctx.font = `${size}px Arial, sans-serif`
-  ctx.fillStyle = color
+// Draw particle with glow effect
+function drawParticle(ctx, particle, palette, progress) {
+  const alpha = particle.opacity * (1 - Math.abs(Math.sin(particle.life * 0.02)))
+  ctx.save()
+  ctx.globalAlpha = alpha
+  ctx.fillStyle = palette.accent
+  ctx.shadowColor = palette.accent
+  ctx.shadowBlur = 20
+
+  ctx.beginPath()
+  ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2)
+  ctx.fill()
+  ctx.restore()
+}
+
+// Draw animated light rays
+function drawLightRays(ctx, width, height, progress, time, palette) {
+  ctx.save()
+  ctx.globalAlpha = 0.1
+
+  const centerX = width / 2
+  const centerY = height / 3
+
+  for (let i = 0; i < 12; i++) {
+    const angle = (i / 12) * Math.PI * 2 + time * 0.2
+    const length = 400 + Math.sin(time + i) * 100
+
+    ctx.beginPath()
+    ctx.moveTo(centerX, centerY)
+    ctx.lineTo(
+      centerX + Math.cos(angle) * length,
+      centerY + Math.sin(angle) * length
+    )
+    ctx.strokeStyle = palette.accent
+    ctx.lineWidth = 3
+    ctx.stroke()
+  }
+
+  ctx.restore()
+}
+
+// Draw cinematic content with animations
+function drawCinematicContent(ctx, width, height, progress, sections, palette, time) {
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+
+  if (progress < 0.25) {
+    // Phase 1: Hook with dramatic entrance
+    const scale = easeOutBack(Math.min(1, progress * 5))
+    const alpha = Math.min(1, progress * 4)
+
+    ctx.save()
+    ctx.translate(width / 2, height * 0.4)
+    ctx.scale(scale, scale)
+    ctx.globalAlpha = alpha
+
+    // Draw hook with glow
+    drawGlowText(ctx, cleanText(sections.hook), 0, 0, 80, palette)
+
+    ctx.restore()
+  } else if (progress < 0.75) {
+    // Phase 2: Main content with fade in
+    const phaseProgress = (progress - 0.25) / 0.5
+    const alpha = Math.min(1, phaseProgress * 3)
+
+    ctx.save()
+    ctx.globalAlpha = alpha
+
+    // Draw caption with typewriter effect
+    const words = cleanText(sections.caption).split(' ')
+    const wordsToShow = Math.floor(words.length * Math.min(1, phaseProgress * 2))
+    const text = words.slice(0, wordsToShow).join(' ')
+
+    drawWrappedGlowText(ctx, text, width / 2, height * 0.35, 52, palette, width * 0.85)
+
+    ctx.restore()
+  } else {
+    // Phase 3: CTA with pulse animation
+    const pulse = 1 + Math.sin(time * 8) * 0.08
+    const alpha = Math.min(1, (progress - 0.75) * 5)
+
+    ctx.save()
+    ctx.translate(width / 2, height * 0.7)
+    ctx.scale(pulse, pulse)
+    ctx.globalAlpha = alpha
+
+    // Draw CTA button style
+    drawCTAButton(ctx, cleanText(sections.cta), 0, 0, palette)
+
+    ctx.restore()
+  }
+}
+
+// Draw text with glow effect
+function drawGlowText(ctx, text, x, y, size, palette) {
+  ctx.font = `bold ${size}px 'Helvetica Neue', Arial, sans-serif`
+
+  // Outer glow
+  ctx.shadowColor = palette.accent
+  ctx.shadowBlur = 30
+  ctx.fillStyle = palette.text
+  ctx.fillText(text, x, y)
+
+  // Inner glow
+  ctx.shadowBlur = 15
+  ctx.fillText(text, x, y)
+
+  // Clear shadow for crisp text
+  ctx.shadowBlur = 0
+  ctx.fillStyle = '#FFFFFF'
+  ctx.fillText(text, x, y)
+}
+
+// Draw wrapped text with glow
+function drawWrappedGlowText(ctx, text, x, y, size, palette, maxWidth) {
+  ctx.font = `${size}px 'Helvetica Neue', Arial, sans-serif`
 
   const words = text.split(' ')
   let line = ''
@@ -226,24 +365,198 @@ function drawWrappedText(ctx, text, x, y, size, color, maxWidth) {
   lines.push(line.trim())
 
   const lineHeight = size * 1.4
-  const startY = y
+  const startY = y - ((lines.length - 1) * lineHeight) / 2
 
   lines.forEach((l, i) => {
+    // Shadow
+    ctx.shadowColor = palette.shadow
+    ctx.shadowBlur = 10
+    ctx.shadowOffsetX = 2
+    ctx.shadowOffsetY = 2
+    ctx.fillStyle = palette.text
     ctx.fillText(l, x, startY + i * lineHeight)
   })
+
+  ctx.shadowBlur = 0
+  ctx.shadowOffsetX = 0
+  ctx.shadowOffsetY = 0
+}
+
+// Draw CTA button
+function drawCTAButton(ctx, text, x, y, palette) {
+  ctx.font = `bold 48px 'Helvetica Neue', Arial, sans-serif`
+  const textWidth = ctx.measureText(text).width
+  const padding = 40
+  const btnWidth = textWidth + padding * 2
+  const btnHeight = 80
+
+  // Button background with gradient
+  const gradient = ctx.createLinearGradient(
+    x - btnWidth / 2, y,
+    x + btnWidth / 2, y
+  )
+  gradient.addColorStop(0, palette.primary[0])
+  gradient.addColorStop(1, palette.accent)
+
+  ctx.fillStyle = gradient
+  ctx.beginPath()
+  ctx.roundRect(x - btnWidth / 2, y - btnHeight / 2, btnWidth, btnHeight, 40)
+  ctx.fill()
+
+  // Button text
+  ctx.fillStyle = '#FFFFFF'
+  ctx.shadowColor = 'rgba(0,0,0,0.3)'
+  ctx.shadowBlur = 5
+  ctx.fillText(text, x, y + 5)
+  ctx.shadowBlur = 0
+}
+
+// Draw progress bar
+function drawProgressBar(ctx, width, height, progress, palette) {
+  const barWidth = width - 100
+  const barHeight = 6
+  const x = 50
+  const y = height - 80
+
+  // Background
+  ctx.fillStyle = 'rgba(255,255,255,0.2)'
+  ctx.beginPath()
+  ctx.roundRect(x, y, barWidth, barHeight, 3)
+  ctx.fill()
+
+  // Progress
+  const gradient = ctx.createLinearGradient(x, y, x + barWidth * progress, y)
+  gradient.addColorStop(0, palette.primary[0])
+  gradient.addColorStop(1, palette.accent)
+
+  ctx.fillStyle = gradient
+  ctx.beginPath()
+  ctx.roundRect(x, y, barWidth * progress, barHeight, 3)
+  ctx.fill()
+
+  // Glow effect on progress
+  ctx.shadowColor = palette.accent
+  ctx.shadowBlur = 10
+  ctx.fill()
+  ctx.shadowBlur = 0
 }
 
 // Draw platform badge
-function drawPlatformBadge(ctx, platform, x, y) {
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.9)'
+function drawPlatformBadge(ctx, platform, x, y, palette) {
+  ctx.fillStyle = 'rgba(255,255,255,0.15)'
   ctx.beginPath()
-  ctx.roundRect(x, y, 120, 40, 20)
+  ctx.roundRect(x, y, 140, 45, 22)
   ctx.fill()
 
-  ctx.fillStyle = '#333333'
-  ctx.font = 'bold 16px Arial, sans-serif'
+  ctx.strokeStyle = 'rgba(255,255,255,0.3)'
+  ctx.lineWidth = 1
+  ctx.stroke()
+
+  ctx.fillStyle = '#FFFFFF'
+  ctx.font = 'bold 16px Helvetica Neue, Arial, sans-serif'
   ctx.textAlign = 'center'
-  ctx.fillText(platform.toUpperCase(), x + 60, y + 25)
+  ctx.fillText(platform.toUpperCase(), x + 70, y + 27)
+  ctx.textAlign = 'left'
+}
+
+// Easing function
+function easeOutBack(t) {
+  const c1 = 1.70158
+  const c3 = c1 + 1
+  return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2)
+}
+
+// Generate background music using Web Audio API
+export function generateBackgroundMusic(duration = 20) {
+  const audioContext = new (window.AudioContext || window.webkitAudioContext)()
+  const sampleRate = audioContext.sampleRate
+  const samples = sampleRate * duration
+  const buffer = audioContext.createBuffer(2, samples, sampleRate)
+
+  const leftChannel = buffer.getChannelData(0)
+  const rightChannel = buffer.getChannelData(1)
+
+  // Create ambient pad sound
+  for (let i = 0; i < samples; i++) {
+    const t = i / sampleRate
+
+    // Base pad (soft sine waves)
+    const pad1 = Math.sin(2 * Math.PI * 110 * t) * 0.08
+    const pad2 = Math.sin(2 * Math.PI * 165 * t) * 0.06
+    const pad3 = Math.sin(2 * Math.PI * 220 * t) * 0.04
+
+    // Slow modulation
+    const mod = Math.sin(2 * Math.PI * 0.1 * t) * 0.5 + 0.5
+
+    // Fade in/out
+    const fadeTime = 2
+    let envelope = 1
+    if (t < fadeTime) envelope = t / fadeTime
+    if (t > duration - fadeTime) envelope = (duration - t) / fadeTime
+
+    const sample = (pad1 + pad2 + pad3) * mod * envelope
+
+    leftChannel[i] = sample
+    rightChannel[i] = sample * (0.9 + Math.random() * 0.1) // Slight stereo width
+  }
+
+  return buffer
+}
+
+// Convert AudioBuffer to Blob
+export function audioBufferToBlob(buffer) {
+  const numChannels = buffer.numberOfChannels
+  const sampleRate = buffer.sampleRate
+  const format = 1 // PCM
+  const bitDepth = 16
+
+  const bytesPerSample = bitDepth / 8
+  const blockAlign = numChannels * bytesPerSample
+
+  const dataLength = buffer.length * blockAlign
+  const bufferLength = 44 + dataLength
+
+  const arrayBuffer = new ArrayBuffer(bufferLength)
+  const view = new DataView(arrayBuffer)
+
+  // WAV header
+  writeString(view, 0, 'RIFF')
+  view.setUint32(4, bufferLength - 8, true)
+  writeString(view, 8, 'WAVE')
+  writeString(view, 12, 'fmt ')
+  view.setUint32(16, 16, true)
+  view.setUint16(20, format, true)
+  view.setUint16(22, numChannels, true)
+  view.setUint32(24, sampleRate, true)
+  view.setUint32(28, sampleRate * blockAlign, true)
+  view.setUint16(32, blockAlign, true)
+  view.setUint16(34, bitDepth, true)
+  writeString(view, 36, 'data')
+  view.setUint32(40, dataLength, true)
+
+  // Write audio data
+  const channelData = []
+  for (let i = 0; i < numChannels; i++) {
+    channelData.push(buffer.getChannelData(i))
+  }
+
+  let offset = 44
+  for (let i = 0; i < buffer.length; i++) {
+    for (let channel = 0; channel < numChannels; channel++) {
+      const sample = Math.max(-1, Math.min(1, channelData[channel][i]))
+      const int16 = sample < 0 ? sample * 0x8000 : sample * 0x7FFF
+      view.setInt16(offset, int16, true)
+      offset += 2
+    }
+  }
+
+  return new Blob([arrayBuffer], { type: 'audio/wav' })
+}
+
+function writeString(view, offset, string) {
+  for (let i = 0; i < string.length; i++) {
+    view.setUint8(offset + i, string.charCodeAt(i))
+  }
 }
 
 // Download video
