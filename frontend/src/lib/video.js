@@ -1,140 +1,264 @@
-// Video script generator and downloader
+// Video Generator using Canvas API - Creates actual playable videos
 
-export function generateVideoScript(content, platform = 'tiktok') {
-  const scripts = {
-    tiktok: `🎬 TIKTOK/REEL SCRIPT
-================================
-
-📱 Format: Vertical Video (9:16)
-⏱️ Duration: 15-60 seconds
-
-HOOK (0-3 seconds):
-"${content.split('\n').find(line => line.includes('Hook'))?.replace('## Hook', '').trim() || 'Stop scrolling! You need to see this'}"
-
-MAIN CONTENT (3-45 seconds):
-"${content.split('\n').filter(l => l.includes('Caption'))[0]?.replace('## Caption', '').trim() || content.substring(0, 200)}"
-
-CTA (45-60 seconds):
-"${content.split('\n').find(line => line.includes('Call-to-Action'))?.replace('## Call-to-Action', '').trim() || 'Follow for more!'}"
-
-VISUAL NOTES:
-- Film vertically (9:16 ratio)
-- Use good lighting
-- Add text overlays for key points
-- Include trending audio
-- Add captions for accessibility
-
-BEST POSTING TIMES:
-- Weekdays: 7-9 AM, 12-2 PM, 7-10 PM
-- Weekends: 9 AM-12 PM
-
-HASHTAGS:
-${content.split('\n').find(line => line.includes('Hashtags'))?.replace('## Hashtags', '').trim() || '#content #viral'}`,
-
-    youtube: `🎬 YOUTUBE SHORT SCRIPT
-================================
-
-📱 Format: Vertical (9:16) or Horizontal (16:9)
-⏱️ Duration: 30-60 seconds
-
-INTRO (0-5 seconds):
-"Hey everyone! Welcome back to the channel."
-"${content.split('\n').find(line => line.includes('Hook'))?.replace('## Hook', '').trim() || 'Today we are talking about something amazing'}"
-
-MAIN CONTENT (5-50 seconds):
-"${content.split('\n').filter(l => l.includes('Caption'))[0]?.replace('## Caption', '').trim() || content.substring(0, 200)}"
-
-OUTRO (50-60 seconds):
-"If you found this helpful, smash that like button and subscribe!"
-"${content.split('\n').find(line => line.includes('Call-to-Action'))?.replace('## Call-to-Action', '').trim() || 'See you in the next video!'}"
-
-THUMBNAIL IDEAS:
-- Bold text overlay
-- Expressive face/reaction
-- Bright colors
-- Clear subject
-
-DESCRIPTION:
-${content.split('\n').find(line => line.includes('Hashtags'))?.replace('## Hashtags', '').trim() || ''}`,
-
-    facebook: `🎬 FACEBOOK VIDEO SCRIPT
-================================
-
-📱 Format: Square (1:1) or Landscape (16:9)
-⏱️ Duration: 1-3 minutes
-
-HOOK (0-10 seconds):
-"${content.split('\n').find(line => line.includes('Hook'))?.replace('## Hook', '').trim() || 'Did you know this amazing fact?'}"
-
-STORY (10-120 seconds):
-"${content.split('\n').filter(l => l.includes('Caption'))[0]?.replace('## Caption', '').trim() || content.substring(0, 300)}"
-
-CTA (120-180 seconds):
-"${content.split('\n').find(line => line.includes('Call-to-Action'))?.replace('## Call-to-Action', '').trim() || 'Share this with someone who needs it!'}"
-
-PRODUCTION NOTES:
-- Use captions (most watch without sound)
-- Keep it authentic and personal
-- Include your brand logo
-- Add background music
-
-POSTING TIPS:
-- Post when audience is most active
-- Reply to comments within first hour
-- Share to relevant groups`,
-
-    linkedin: `🎬 LINKEDIN VIDEO SCRIPT
-================================
-
-📱 Format: Square (1:1) or Vertical (4:5)
-⏱️ Duration: 1-2 minutes
-
-HOOK (0-10 seconds):
-"${content.split('\n').find(line => line.includes('Hook'))?.replace('## Hook', '').trim() || 'Here is something most professionals do not know'}"
-
-VALUE (10-90 seconds):
-"${content.split('\n').filter(l => l.includes('Caption'))[0]?.replace('## Caption', '').trim() || content.substring(0, 250)}"
-
-CTA (90-120 seconds):
-"${content.split('\n').find(line => line.includes('Call-to-Action'))?.replace('## Call-to-Action', '').trim() || 'What are your thoughts? Let me know in the comments!'}"
-
-PROFESSIONAL TIPS:
-- Dress professionally
-- Use clean background
-- Speak clearly and confidently
-- Add subtitles
-- Include your title/company
-
-BEST PRACTICES:
-- Post Tuesday-Thursday
-- 8-10 AM or 12-1 PM
-- Engage with comments immediately`,
+// Parse content into sections
+function parseContent(text) {
+  const sections = {
+    hook: '',
+    caption: '',
+    cta: '',
+    hashtags: '',
   }
 
-  return scripts[platform] || scripts.tiktok
+  const lines = text.split('\n')
+  let currentSection = ''
+
+  for (const line of lines) {
+    const lower = line.toLowerCase().trim()
+    if (lower.includes('## hook') || lower.includes('hook')) {
+      currentSection = 'hook'
+    } else if (lower.includes('## caption') || lower.includes('caption')) {
+      currentSection = 'caption'
+    } else if (lower.includes('call-to-action') || lower.includes('cta')) {
+      currentSection = 'cta'
+    } else if (lower.includes('## hashtag') || lower.includes('hashtag')) {
+      currentSection = 'hashtags'
+    } else if (line.trim() && currentSection && !line.startsWith('#')) {
+      sections[currentSection] += line.trim() + ' '
+    }
+  }
+
+  return {
+    hook: sections.hook.trim() || 'Check this out!',
+    caption: sections.caption.trim() || text.substring(0, 200),
+    cta: sections.cta.trim() || 'Follow for more!',
+  }
 }
 
-export function downloadVideoScript(content, platform, filename) {
-  const script = generateVideoScript(content, platform)
-  const blob = new Blob([script], { type: 'text/plain' })
-  const url = URL.createObjectURL(blob)
+// Video color schemes
+const colorSchemes = {
+  instagram: { bg: ['#833AB4', '#FD1D1D', '#F77737'], text: '#FFFFFF' },
+  tiktok: { bg: ['#000000', '#69C9D0', '#EE1D52'], text: '#FFFFFF' },
+  facebook: { bg: ['#1877F2', '#42B72A', '#F7B928'], text: '#FFFFFF' },
+  linkedin: { bg: ['#0077B5', '#00A0DC', '#5BA0D9'], text: '#FFFFFF' },
+  x: { bg: ['#1DA1F2', '#14171A', '#657786'], text: '#FFFFFF' },
+  threads: { bg: ['#000000', '#333333', '#666666'], text: '#FFFFFF' },
+}
 
+// Create animated video using Canvas
+export async function generateVideo(content, platform = 'instagram', options = {}) {
+  const {
+    duration = 15000, // 15 seconds
+    width = 1080,
+    height = 1920, // Vertical video
+    fps = 30,
+  } = options
+
+  const canvas = document.createElement('canvas')
+  canvas.width = width
+  canvas.height = height
+  const ctx = canvas.getContext('2d')
+
+  const sections = parseContent(content)
+  const colors = colorSchemes[platform] || colorSchemes.instagram
+
+  // Create video stream
+  const stream = canvas.captureStream(fps)
+  const mediaRecorder = new MediaRecorder(stream, {
+    mimeType: 'video/webm;codecs=vp9',
+    videoBitsPerSecond: 5000000,
+  })
+
+  const chunks = []
+  mediaRecorder.ondataavailable = (e) => {
+    if (e.data.size > 0) chunks.push(e.data)
+  }
+
+  const videoBlob = await new Promise((resolve) => {
+    mediaRecorder.onstop = () => {
+      const blob = new Blob(chunks, { type: 'video/webm' })
+      resolve(blob)
+    }
+
+    mediaRecorder.start()
+
+    // Animation frames
+    const totalFrames = Math.floor((duration / 1000) * fps)
+    let frame = 0
+
+    const animate = () => {
+      if (frame >= totalFrames) {
+        mediaRecorder.stop()
+        return
+      }
+
+      const progress = frame / totalFrames
+      const time = (frame / fps) * 1000
+
+      // Clear canvas
+      ctx.clearRect(0, 0, width, height)
+
+      // Draw gradient background
+      const gradient = ctx.createLinearGradient(0, 0, width, height)
+      colors.bg.forEach((color, i) => {
+        gradient.addColorStop(i / (colors.bg.length - 1), color)
+      })
+      ctx.fillStyle = gradient
+      ctx.fillRect(0, 0, width, height)
+
+      // Add animated particles
+      drawParticles(ctx, width, height, progress, frame)
+
+      // Draw content based on time
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'middle'
+
+      if (progress < 0.3) {
+        // Hook phase - large text with animation
+        const scale = 1 + Math.sin(progress * 10) * 0.05
+        ctx.save()
+        ctx.translate(width / 2, height / 2)
+        ctx.scale(scale, scale)
+        drawTextWithShadow(ctx, sections.hook, 0, 0, 72, colors.text, width * 0.8)
+        ctx.restore()
+      } else if (progress < 0.8) {
+        // Caption phase
+        const alpha = Math.min(1, (progress - 0.3) * 5)
+        ctx.globalAlpha = alpha
+        drawWrappedText(ctx, sections.caption, width / 2, height * 0.3, 48, colors.text, width * 0.85)
+        ctx.globalAlpha = 1
+      } else {
+        // CTA phase - with pulse animation
+        const pulse = 1 + Math.sin(progress * 20) * 0.1
+        ctx.save()
+        ctx.translate(width / 2, height * 0.7)
+        ctx.scale(pulse, pulse)
+        drawTextWithShadow(ctx, sections.cta, 0, 0, 64, '#FFD700', width * 0.8)
+        ctx.restore()
+      }
+
+      // Draw progress bar
+      ctx.fillStyle = 'rgba(255,255,255,0.3)'
+      ctx.fillRect(50, height - 100, width - 100, 8)
+      ctx.fillStyle = '#FFFFFF'
+      ctx.fillRect(50, height - 100, (width - 100) * progress, 8)
+
+      // Draw platform logo placeholder
+      drawPlatformBadge(ctx, platform, width - 150, 100)
+
+      frame++
+      requestAnimationFrame(animate)
+    }
+
+    animate()
+  })
+
+  return videoBlob
+}
+
+// Draw animated particles
+function drawParticles(ctx, width, height, progress, frame) {
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.1)'
+  for (let i = 0; i < 20; i++) {
+    const x = (Math.sin(i * 0.5 + frame * 0.02) + 1) * width / 2
+    const y = (Math.cos(i * 0.7 + frame * 0.015) + 1) * height / 2
+    const size = 5 + Math.sin(i + frame * 0.05) * 3
+    ctx.beginPath()
+    ctx.arc(x, y, size, 0, Math.PI * 2)
+    ctx.fill()
+  }
+}
+
+// Draw text with shadow
+function drawTextWithShadow(ctx, text, x, y, size, color, maxWidth) {
+  ctx.font = `bold ${size}px Arial, sans-serif`
+  ctx.shadowColor = 'rgba(0, 0, 0, 0.5)'
+  ctx.shadowBlur = 10
+  ctx.shadowOffsetX = 2
+  ctx.shadowOffsetY = 2
+
+  // Word wrap
+  const words = text.split(' ')
+  let line = ''
+  const lines = []
+
+  for (const word of words) {
+    const testLine = line + word + ' '
+    const metrics = ctx.measureText(testLine)
+    if (metrics.width > maxWidth && line) {
+      lines.push(line.trim())
+      line = word + ' '
+    } else {
+      line = testLine
+    }
+  }
+  lines.push(line.trim())
+
+  const lineHeight = size * 1.3
+  const startY = y - ((lines.length - 1) * lineHeight) / 2
+
+  ctx.fillStyle = color
+  lines.forEach((l, i) => {
+    ctx.fillText(l, x, startY + i * lineHeight)
+  })
+
+  ctx.shadowColor = 'transparent'
+}
+
+// Draw wrapped text
+function drawWrappedText(ctx, text, x, y, size, color, maxWidth) {
+  ctx.font = `${size}px Arial, sans-serif`
+  ctx.fillStyle = color
+
+  const words = text.split(' ')
+  let line = ''
+  const lines = []
+
+  for (const word of words) {
+    const testLine = line + word + ' '
+    const metrics = ctx.measureText(testLine)
+    if (metrics.width > maxWidth && line) {
+      lines.push(line.trim())
+      line = word + ' '
+    } else {
+      line = testLine
+    }
+  }
+  lines.push(line.trim())
+
+  const lineHeight = size * 1.4
+  const startY = y
+
+  lines.forEach((l, i) => {
+    ctx.fillText(l, x, startY + i * lineHeight)
+  })
+}
+
+// Draw platform badge
+function drawPlatformBadge(ctx, platform, x, y) {
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.9)'
+  ctx.beginPath()
+  ctx.roundRect(x, y, 120, 40, 20)
+  ctx.fill()
+
+  ctx.fillStyle = '#333333'
+  ctx.font = 'bold 16px Arial, sans-serif'
+  ctx.textAlign = 'center'
+  ctx.fillText(platform.toUpperCase(), x + 60, y + 25)
+}
+
+// Download video
+export function downloadVideo(blob, filename = 'content-video') {
+  const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
-  a.download = `${filename || 'video-script'}-${platform}.txt`
+  a.download = `${filename}.webm`
   document.body.appendChild(a)
   a.click()
   document.body.removeChild(a)
   URL.revokeObjectURL(url)
 }
 
-export function generateVideoThumbnail(content) {
-  // Generate a thumbnail idea based on content
-  const title = content.split('\n').find(l => l.includes('#'))?.replace(/#/g, '').trim() || 'Check This Out'
-  return {
-    title,
-    style: 'Bold text on gradient background',
-    colors: ['#FF6B6B', '#4ECDC4', '#45B7D1'],
-    elements: ['Main text', 'Subtitle', 'Brand logo', 'Border'],
-  }
+// Create video URL for playback
+export function createVideoUrl(blob) {
+  return URL.createObjectURL(blob)
 }

@@ -1,10 +1,10 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { motion } from 'framer-motion'
 import {
   Wand2, Sparkles, Copy, Save, RefreshCw, Download,
   FileText, Image, Film, Music, Play, Pause, Upload,
-  Volume2, Video, Mic, Camera
+  Volume2, Video, Mic, Camera, Square, SquareIcon, Stop
 } from 'lucide-react'
 import Button from '../ui/Button'
 import Select from '../ui/Select'
@@ -13,8 +13,8 @@ import Card from '../ui/Card'
 import FileUpload from '../ui/FileUpload'
 import { useToast } from '../../contexts/ToastContext'
 import { streamAI } from '../../lib/api'
-import { generateSpeech, stopSpeech } from '../../lib/audio'
-import { downloadVideoScript, generateVideoScript } from '../../lib/video'
+import { speak, stopSpeech, pauseSpeech, resumeSpeech, isSpeaking, isPaused, voiceProfiles, getAvailableVoices } from '../../lib/audio'
+import { generateVideo, downloadVideo, createVideoUrl } from '../../lib/video'
 
 const businessTypes = [
   { value: 'restaurant', label: 'Restaurant' },
@@ -105,9 +105,15 @@ export default function GeneratorForm() {
   const [generatedContent, setGeneratedContent] = useState('')
   const [isGenerating, setIsGenerating] = useState(false)
   const [showDownloads, setShowDownloads] = useState(false)
-  const [isPlaying, setIsPlaying] = useState(false)
+  const [selectedVoice, setSelectedVoice] = useState('professional-male')
+  const [speaking, setSpeaking] = useState(false)
+  const [paused, setPaused] = useState(false)
   const [uploadedFiles, setUploadedFiles] = useState([])
   const [activeTab, setActiveTab] = useState('content')
+  const [videoUrl, setVideoUrl] = useState(null)
+  const [isGeneratingVideo, setIsGeneratingVideo] = useState(false)
+  const [showVideo, setShowVideo] = useState(false)
+  const videoRef = useRef(null)
   const { addToast } = useToast()
 
   const { register, handleSubmit, watch, formState: { errors } } = useForm({
@@ -127,12 +133,22 @@ export default function GeneratorForm() {
 
   const watchedPlatform = watch('platform')
 
+  // Monitor speaking state
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setSpeaking(isSpeaking())
+      setPaused(isPaused())
+    }, 100)
+    return () => clearInterval(interval)
+  }, [])
+
   const onGenerate = async (data) => {
     setIsGenerating(true)
     setGeneratedContent('')
+    setVideoUrl(null)
+    setShowVideo(false)
 
     try {
-      // Include uploaded file info in the request
       const requestData = {
         ...data,
         hasImages: uploadedFiles.length > 0,
@@ -159,16 +175,66 @@ export default function GeneratorForm() {
     addToast('Copied to clipboard!', 'success')
   }
 
-  const handleAudioPlay = () => {
-    if (isPlaying) {
-      stopSpeech()
-      setIsPlaying(false)
+  // Audio controls
+  const handlePlayPause = () => {
+    if (speaking) {
+      if (paused) {
+        resumeSpeech()
+      } else {
+        pauseSpeech()
+      }
     } else {
-      const textOnly = generatedContent.replace(/[#*`\n]/g, ' ').substring(0, 500)
-      generateSpeech(textOnly, { rate: 0.9 })
-      setIsPlaying(true)
-      addToast('Playing audio preview...', 'info')
-      setTimeout(() => setIsPlaying(false), 30000)
+      speak(generatedContent, selectedVoice, () => {
+        setSpeaking(false)
+        setPaused(false)
+      })
+      setSpeaking(true)
+    }
+  }
+
+  const handleStop = () => {
+    stopSpeech()
+    setSpeaking(false)
+    setPaused(false)
+  }
+
+  // Video generation
+  const handleGenerateVideo = async () => {
+    if (!generatedContent) {
+      addToast('Generate content first', 'error')
+      return
+    }
+
+    setIsGeneratingVideo(true)
+    addToast('Generating video...', 'info')
+
+    try {
+      const blob = await generateVideo(generatedContent, watchedPlatform || 'instagram', {
+        duration: 15000,
+        width: 1080,
+        height: 1920,
+      })
+      const url = createVideoUrl(blob)
+      setVideoUrl(url)
+      setShowVideo(true)
+      addToast('Video generated! Click play to preview.', 'success')
+    } catch (error) {
+      addToast('Failed to generate video', 'error')
+      console.error('Video generation error:', error)
+    } finally {
+      setIsGeneratingVideo(false)
+    }
+  }
+
+  const handleDownloadVideo = () => {
+    if (videoUrl) {
+      const a = document.createElement('a')
+      a.href = videoUrl
+      a.download = `content-video-${watchedPlatform || 'social'}.webm`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      addToast('Video downloaded!', 'success')
     }
   }
 
@@ -196,19 +262,12 @@ export default function GeneratorForm() {
       case 'json':
         const json = JSON.stringify({
           content: generatedContent,
+          platform: watchedPlatform,
           uploadedFiles: uploadedFiles.map(f => ({ name: f.name, type: f.type })),
           date: new Date().toISOString()
         }, null, 2)
         downloadFile(json, `${filename}.json`, 'application/json')
         break
-      case 'video-script':
-        const script = generateVideoScript(generatedContent, watchedPlatform || 'tiktok')
-        downloadFile(script, `${filename}-video-script.txt`, 'text/plain')
-        break
-      case 'audio':
-        handleAudioPlay()
-        addToast('Playing audio. Use screen recording to save.', 'info')
-        return
       default:
         downloadFile(generatedContent, `${filename}.txt`, 'text/plain')
     }
@@ -303,6 +362,34 @@ export default function GeneratorForm() {
               <FileUpload onFilesChange={setUploadedFiles} maxFiles={5} />
             )}
 
+            {/* Voice Selection */}
+            {activeTab === 'audio' && (
+              <div className="space-y-3">
+                <label className="block text-sm font-medium text-secondary-700 dark:text-secondary-300">
+                  Select Advertising Voice
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {voiceProfiles.map((voice) => (
+                    <button
+                      key={voice.id}
+                      type="button"
+                      onClick={() => setSelectedVoice(voice.id)}
+                      className={`p-3 rounded-lg border-2 text-left transition-all ${
+                        selectedVoice === voice.id
+                          ? 'border-primary-500 bg-primary-50 dark:bg-primary-950'
+                          : 'border-secondary-200 dark:border-secondary-700 hover:border-secondary-300'
+                      }`}
+                    >
+                      <p className={`text-sm font-medium ${selectedVoice === voice.id ? 'text-primary-600' : 'text-secondary-900 dark:text-white'}`}>
+                        {voice.name}
+                      </p>
+                      <p className="text-xs text-secondary-500 mt-0.5">{voice.description}</p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <Button type="submit" className="w-full" size="lg" disabled={isGenerating}>
               {isGenerating ? (
                 <>
@@ -325,15 +412,6 @@ export default function GeneratorForm() {
             <h2 className="text-lg font-semibold text-secondary-900 dark:text-white">Generated Content</h2>
             {generatedContent && (
               <div className="flex items-center gap-2">
-                {/* Audio Play Button */}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleAudioPlay}
-                  title="Listen to content"
-                >
-                  {isPlaying ? <Pause className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-                </Button>
                 <Button variant="ghost" size="sm" onClick={handleCopy}>
                   <Copy className="w-4 h-4" />
                 </Button>
@@ -347,23 +425,20 @@ export default function GeneratorForm() {
                   {showDownloads && (
                     <div className="absolute right-0 top-full mt-1 w-56 bg-white dark:bg-secondary-900 rounded-lg shadow-lg border border-secondary-200 dark:border-secondary-700 py-1 z-10">
                       <button onClick={() => handleDownload('txt')} className="w-full px-3 py-2 text-left text-sm hover:bg-secondary-50 dark:hover:bg-secondary-800 flex items-center gap-2">
-                        <FileText className="w-4 h-4" /> Download as TXT
+                        <FileText className="w-4 h-4" /> Download TXT
                       </button>
                       <button onClick={() => handleDownload('md')} className="w-full px-3 py-2 text-left text-sm hover:bg-secondary-50 dark:hover:bg-secondary-800 flex items-center gap-2">
-                        <FileText className="w-4 h-4" /> Download as Markdown
+                        <FileText className="w-4 h-4" /> Download Markdown
                       </button>
                       <button onClick={() => handleDownload('html')} className="w-full px-3 py-2 text-left text-sm hover:bg-secondary-50 dark:hover:bg-secondary-800 flex items-center gap-2">
-                        <FileText className="w-4 h-4" /> Download as HTML
+                        <FileText className="w-4 h-4" /> Download HTML
                       </button>
                       <button onClick={() => handleDownload('json')} className="w-full px-3 py-2 text-left text-sm hover:bg-secondary-50 dark:hover:bg-secondary-800 flex items-center gap-2">
-                        <FileText className="w-4 h-4" /> Download as JSON
+                        <FileText className="w-4 h-4" /> Download JSON
                       </button>
                       <div className="border-t border-secondary-200 dark:border-secondary-700 my-1" />
-                      <button onClick={() => handleDownload('video-script')} className="w-full px-3 py-2 text-left text-sm hover:bg-secondary-50 dark:hover:bg-secondary-800 flex items-center gap-2">
-                        <Video className="w-4 h-4" /> Download Video Script
-                      </button>
-                      <button onClick={() => handleDownload('audio')} className="w-full px-3 py-2 text-left text-sm hover:bg-secondary-50 dark:hover:bg-secondary-800 flex items-center gap-2">
-                        <Music className="w-4 h-4" /> Play as Audio
+                      <button onClick={handleGenerateVideo} className="w-full px-3 py-2 text-left text-sm hover:bg-secondary-50 dark:hover:bg-secondary-800 flex items-center gap-2">
+                        <Video className="w-4 h-4" /> Generate Video
                       </button>
                     </div>
                   )}
@@ -397,52 +472,107 @@ export default function GeneratorForm() {
             )}
           </div>
 
-          {/* Audio Player */}
+          {/* Audio Player - Professional Voice */}
           {generatedContent && (
-            <div className="mt-4 p-4 bg-secondary-100 dark:bg-secondary-800 rounded-lg">
-              <div className="flex items-center gap-3">
+            <div className="mt-4 p-4 bg-gradient-to-r from-primary-50 to-primary-100 dark:from-primary-950 dark:to-primary-900 rounded-lg border border-primary-200 dark:border-primary-800">
+              <div className="flex items-center gap-3 mb-3">
+                <Mic className="w-5 h-5 text-primary-600" />
+                <p className="text-sm font-semibold text-primary-900 dark:text-primary-100">Professional Voice Preview</p>
+              </div>
+
+              {/* Voice Selection */}
+              <select
+                value={selectedVoice}
+                onChange={(e) => setSelectedVoice(e.target.value)}
+                className="w-full mb-3 p-2 rounded-lg border border-primary-200 dark:border-primary-700 bg-white dark:bg-secondary-800 text-sm"
+              >
+                {voiceProfiles.map(voice => (
+                  <option key={voice.id} value={voice.id}>{voice.name} - {voice.description}</option>
+                ))}
+              </select>
+
+              {/* Audio Controls */}
+              <div className="flex items-center gap-2">
                 <button
-                  onClick={handleAudioPlay}
-                  className="w-10 h-10 rounded-full bg-primary-600 flex items-center justify-center hover:bg-primary-700 transition-colors"
+                  onClick={handlePlayPause}
+                  className="w-12 h-12 rounded-full bg-primary-600 flex items-center justify-center hover:bg-primary-700 transition-colors"
                 >
-                  {isPlaying ? (
-                    <Pause className="w-5 h-5 text-white" />
+                  {speaking ? (
+                    paused ? <Play className="w-5 h-5 text-white ml-0.5" /> : <Pause className="w-5 h-5 text-white" />
                   ) : (
                     <Play className="w-5 h-5 text-white ml-0.5" />
                   )}
                 </button>
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-secondary-900 dark:text-white">Audio Preview</p>
-                  <p className="text-xs text-secondary-500">
-                    {isPlaying ? 'Playing content as speech...' : 'Click to listen to your content'}
+                <button
+                  onClick={handleStop}
+                  className="w-10 h-10 rounded-full bg-secondary-200 dark:bg-secondary-700 flex items-center justify-center hover:bg-secondary-300 transition-colors"
+                >
+                  <Square className="w-4 h-4 text-secondary-600 dark:text-secondary-300" />
+                </button>
+                <div className="flex-1 ml-2">
+                  <p className="text-sm font-medium text-primary-900 dark:text-primary-100">
+                    {speaking ? (paused ? 'Paused' : 'Playing...') : 'Ready to play'}
+                  </p>
+                  <p className="text-xs text-primary-600 dark:text-primary-400">
+                    No hashtags or emojis • Professional {voiceProfiles.find(v => v.id === selectedVoice)?.name}
                   </p>
                 </div>
-                <Mic className="w-5 h-5 text-secondary-400" />
+                <Volume2 className="w-5 h-5 text-primary-400" />
               </div>
             </div>
           )}
 
-          {/* Video Script Preview */}
-          {generatedContent && watchedPlatform && (
-            <div className="mt-4 p-4 bg-purple-50 dark:bg-purple-950/30 rounded-lg border border-purple-200 dark:border-purple-800">
-              <div className="flex items-center gap-2 mb-2">
+          {/* Video Player */}
+          {generatedContent && (
+            <div className="mt-4 p-4 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950 dark:to-pink-950 rounded-lg border border-purple-200 dark:border-purple-800">
+              <div className="flex items-center gap-2 mb-3">
                 <Video className="w-5 h-5 text-purple-600" />
-                <p className="text-sm font-medium text-purple-900 dark:text-purple-100">
-                  Video Script Available for {watchedPlatform}
-                </p>
+                <p className="text-sm font-semibold text-purple-900 dark:text-purple-100">Video Generator</p>
               </div>
-              <p className="text-xs text-purple-600 dark:text-purple-400 mb-3">
-                Download a complete video script with hooks, timing, and visual notes.
-              </p>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleDownload('video-script')}
-                className="border-purple-300 text-purple-600 hover:bg-purple-100"
-              >
-                <Download className="w-4 h-4 mr-2" />
-                Download Video Script
-              </Button>
+
+              {!showVideo ? (
+                <div>
+                  <p className="text-xs text-purple-600 dark:text-purple-400 mb-3">
+                    Generate an animated video for {watchedPlatform || 'social media'} with your content.
+                  </p>
+                  <Button
+                    onClick={handleGenerateVideo}
+                    disabled={isGeneratingVideo}
+                    className="bg-purple-600 hover:bg-purple-700"
+                  >
+                    {isGeneratingVideo ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                        Creating Video...
+                      </>
+                    ) : (
+                      <>
+                        <Film className="w-4 h-4 mr-2" />
+                        Generate Video
+                      </>
+                    )}
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <video
+                    ref={videoRef}
+                    src={videoUrl}
+                    controls
+                    className="w-full max-w-xs mx-auto rounded-lg shadow-lg"
+                    style={{ maxHeight: '400px' }}
+                  />
+                  <div className="flex gap-2 justify-center">
+                    <Button onClick={handleDownloadVideo} variant="outline" size="sm">
+                      <Download className="w-4 h-4 mr-2" />
+                      Download Video
+                    </Button>
+                    <Button onClick={() => { setShowVideo(false); setVideoUrl(null) }} variant="ghost" size="sm">
+                      Generate New
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </Card>
