@@ -11,89 +11,172 @@ A modern SaaS platform for generating professional social media content using AI
 - **Payments**: Stripe
 - **Hosting**: Vercel
 
-## Quick Start
+---
+
+## Quick Start (Local Development)
 
 ### Prerequisites
+- Node.js 18+ installed
+- A Supabase account (free)
+- An OpenAI account (pay per use)
 
-- Node.js 18+
-- npm or yarn
-- Supabase account
-- OpenAI API key
-- Stripe account (optional)
-
-### Installation
+### 1. Clone & Install
 
 ```bash
-# Clone the repository
-git clone <your-repo-url>
-cd contentai
+git clone https://github.com/walterolum/AI-content-creator.git
+cd AI-content-creator
 
-# Install frontend dependencies
+# Install frontend
 cd frontend
 npm install
 
-# Install backend dependencies
+# Install backend
 cd ../backend
 npm install
-
-# Copy environment files
-cp .env.example .env
-cd ../frontend
-cp .env.example .env
 ```
 
-### Configuration
+### 2. Get Your API Keys
 
-1. Create a Supabase project at https://supabase.com
-2. Run the SQL schema from `backend/src/config/schema.sql`
-3. Get your Supabase URL and keys
-4. Get an OpenAI API key
-5. Update `.env` files with your keys
+**Supabase (Database & Auth):**
+1. Go to https://supabase.com → Sign up/Login
+2. Create new project
+3. Go to Settings → API
+4. Copy: Project URL, anon key, service_role key
 
-### Running
+**OpenAI (AI):**
+1. Go to https://platform.openai.com
+2. Add credits ($5 minimum)
+3. Go to API Keys → Create new key
+4. Copy the key (starts with sk-)
+
+### 3. Configure Environment Variables
+
+**Frontend** - Edit `frontend/.env`:
+```env
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_ANON_KEY=your-anon-key
+VITE_API_URL=http://localhost:3001/api
+```
+
+**Backend** - Edit `backend/.env`:
+```env
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_SERVICE_KEY=your-service-key
+OPENAI_API_KEY=sk-your-openai-key
+JWT_SECRET=any-random-string-here
+```
+
+### 4. Setup Database
+
+1. Go to Supabase Dashboard → SQL Editor
+2. Open `backend/src/config/schema.sql`
+3. Copy entire content
+4. Paste into SQL Editor → Click Run
+
+### 5. Run Development Servers
 
 ```bash
-# Frontend (port 5173)
-cd frontend
-npm run dev
-
-# Backend (port 3001)
+# Terminal 1 - Backend (port 3001)
 cd backend
 npm run dev
+
+# Terminal 2 - Frontend (port 5173)
+cd frontend
+npm run dev
 ```
+
+Open http://localhost:5173
+
+---
+
+## Deploy to Production (Vercel)
+
+### Step 1: Push to GitHub
+
+```bash
+git add -A
+git commit -m "ready for deployment"
+git push
+```
+
+### Step 2: Deploy Backend
+
+1. Go to https://vercel.com → Login with GitHub
+2. Click "Add New Project"
+3. Select your repository
+4. Configure:
+   - Root Directory: `./backend`
+   - Build Command: `npm install`
+   - Output Directory: (leave empty)
+5. Add Environment Variables:
+   - SUPABASE_URL
+   - SUPABASE_SERVICE_KEY
+   - OPENAI_API_KEY
+   - JWT_SECRET
+   - NODE_ENV=production
+6. Click Deploy
+7. Copy your backend URL (e.g., https://ai-content-creator-xxx.vercel.app)
+
+### Step 3: Deploy Frontend
+
+1. Vercel Dashboard → Add New Project
+2. Select same repository
+3. Configure:
+   - Root Directory: `./frontend`
+   - Build Command: `npm run build`
+   - Output Directory: `dist`
+4. Add Environment Variables:
+   - VITE_SUPABASE_URL
+   - VITE_SUPABASE_ANON_KEY
+   - VITE_API_URL=https://your-backend.vercel.app/api
+5. Click Deploy
+6. Open your live app!
+
+### Step 4: Update Supabase for Production
+
+1. Go to Supabase → Authentication → URL Configuration
+2. Add your frontend URL:
+   - Site URL: https://your-frontend.vercel.app
+   - Redirect URLs: https://your-frontend.vercel.app/auth/callback
+
+---
 
 ## Features
 
-- AI Content Generator (captions, hashtags, scripts)
+- AI Content Generator (12 business types, 6 platforms, 9 tones)
 - Content Library with search/filter
 - AI Rewrite Tools (expand, shorten, translate, humanize)
-- Content Calendar with scheduling
+- Content Calendar with AI generation
 - Analytics Dashboard
-- Admin Panel
-- Subscription Management
+- Admin Panel with user management
+- Subscription Plans (Free, Starter, Pro, Agency)
 - Dark/Light Mode
+- Responsive Design
 
-## Database Schema
+---
 
-See `backend/src/config/schema.sql` for the complete schema.
-
-## Deployment
-
-### Vercel (Frontend)
-
-```bash
-cd frontend
-vercel
-```
-
-### Backend
-
-Deploy to Vercel Serverless or any Node.js host.
-
-### Environment Variables
+## Project Structure
 
 ```
-VITE_SUPABASE_URL=your_url
-VITE_SUPABASE_ANON_KEY=your_key
-VITE_API_URL=your_api_url
+AI-content-creator/
+├── frontend/               # React app
+│   ├── src/
+│   │   ├── components/    # Reusable UI components
+│   │   ├── pages/         # Page components
+│   │   ├── contexts/      # React contexts
+│   │   └── lib/           # Utilities
+│   └── vercel.json        # Vercel config
+├── backend/                # Express API
+│   └── src/
+│       ├── routes/        # API routes
+│       ├── services/      # AI service
+│       ├── middleware/     # Auth & validation
+│       └── config/        # Config & DB schema
+└── README.md
 ```
+
+---
+
+## License
+
+MIT
