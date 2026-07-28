@@ -4,7 +4,7 @@ import { motion } from 'framer-motion'
 import {
   Wand2, Sparkles, Copy, Save, RefreshCw, Download,
   FileText, Image, Film, Music, Play, Pause, Upload,
-  Volume2, Video, Mic, Camera, Square, SquareIcon, Stop
+  Volume2, Video, Mic, Camera, Square
 } from 'lucide-react'
 import Button from '../ui/Button'
 import Select from '../ui/Select'
