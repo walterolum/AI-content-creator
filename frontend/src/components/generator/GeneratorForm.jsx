@@ -1,12 +1,13 @@
 import { useState, useRef } from 'react'
 import { useForm } from 'react-hook-form'
-import { Wand2, Sparkles, RefreshCw, FileText, Image as ImageIcon, Clapperboard } from 'lucide-react'
+import { Wand2, Sparkles, RefreshCw, FileText, Image as ImageIcon, Clapperboard, FolderOpen, Zap } from 'lucide-react'
 import Button from '../ui/Button'
 import Select from '../ui/Select'
 import Input from '../ui/Input'
 import Card from '../ui/Card'
 import FileUpload from '../ui/FileUpload'
 import AdEditor from './AdEditor'
+import TemplateManager from './TemplateManager'
 import { useToast } from '../../contexts/ToastContext'
 import { streamAI } from '../../lib/api'
 import { generateScript, createEmptyScript, generateVoiceoverScript } from '../../lib/scriptWriter'
@@ -101,9 +102,67 @@ export default function GeneratorForm() {
   const [uploadedFiles, setUploadedFiles] = useState([])
   const [activeTab, setActiveTab] = useState('content')
   const [showEditor, setShowEditor] = useState(false)
+  const [quickPrompt, setQuickPrompt] = useState('')
+  const [isQuickCreating, setIsQuickCreating] = useState(false)
   const { addToast } = useToast()
 
-  const { register, handleSubmit, watch, formState: { errors } } = useForm({
+  const quickCreate = async () => {
+    if (!quickPrompt.trim()) { addToast('Enter a prompt', 'error'); return }
+    setIsQuickCreating(true)
+    try {
+      const parsed = parseQuickPrompt(quickPrompt)
+      Object.entries(parsed).forEach(([key, value]) => {
+        if (value) setValue(key, value)
+      })
+      await onGenerate(parsed)
+    } catch (e) {
+      addToast('Quick create failed: ' + e.message, 'error')
+      setIsQuickCreating(false)
+    }
+    setIsQuickCreating(false)
+  }
+
+  function parseQuickPrompt(prompt) {
+    const lower = prompt.toLowerCase()
+    const result = {
+      businessType: 'business',
+      platform: 'instagram',
+      tone: 'professional',
+      goal: 'engagement',
+      audience: 'everyone',
+      topic: prompt,
+      keywords: '',
+      videoType: 'commercial',
+      language: 'english',
+    }
+    const platformMap = { instagram: 'instagram', facebook: 'facebook', linkedin: 'linkedin', tiktok: 'tiktok', twitter: 'x', youtube: 'youtube', threads: 'threads' }
+    for (const [key, val] of Object.entries(platformMap)) {
+      if (lower.includes(key)) result.platform = val
+    }
+    const toneMap = { luxury: 'luxury', professional: 'professional', funny: 'funny', friendly: 'friendly', inspirational: 'inspirational', persuasive: 'persuasive', educational: 'educational', corporate: 'corporate', youthful: 'youthful' }
+    for (const [key, val] of Object.entries(toneMap)) {
+      if (lower.includes(key)) result.tone = val
+    }
+    const bizMap = { restaurant: 'restaurant', fashion: 'fashion', salon: 'salon', beauty: 'salon', pharmacy: 'pharmacy', school: 'school', education: 'school', church: 'church', 'real estate': 'real-estate', hotel: 'hotel', 'coffee': 'coffee-shop', tech: 'technology', 'e-commerce': 'ecommerce', 'ecommerce': 'ecommerce', 'non-profit': 'ngo', 'ngo': 'ngo', agency: 'agency' }
+    for (const [key, val] of Object.entries(bizMap)) {
+      if (lower.includes(key)) result.businessType = val
+    }
+    const audMap = { teenager: 'teenagers', student: 'students', professional: 'professionals', parent: 'parents', 'business owner': 'business-owners', entrepreneur: 'business-owners' }
+    for (const [key, val] of Object.entries(audMap)) {
+      if (lower.includes(key)) result.audience = val
+    }
+    const goalMap = { sales: 'sales', awareness: 'awareness', leads: 'lead-generation', traffic: 'website-traffic', growth: 'brand-growth', engage: 'engagement' }
+    for (const [key, val] of Object.entries(goalMap)) {
+      if (lower.includes(key)) result.goal = val
+    }
+    const typeMap = { explainer: 'explainer', educational: 'educational', testimonial: 'testimonial', commercial: 'commercial', social: 'social', ad: 'commercial' }
+    for (const [key, val] of Object.entries(typeMap)) {
+      if (lower.includes(key)) result.videoType = val
+    }
+    return result
+  }
+
+  const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm({
     defaultValues: {
       businessType: '', platform: '', tone: 'professional',
       goal: 'engagement', audience: 'everyone', length: 'medium',
@@ -113,6 +172,13 @@ export default function GeneratorForm() {
   })
 
   const watchedPlatform = watch('platform')
+
+  const onLoadTemplate = (settings) => {
+    Object.entries(settings).forEach(([key, value]) => {
+      setValue(key, value)
+    })
+    addToast('Template loaded', 'success')
+  }
 
   const onGenerate = async (data) => {
     setIsGenerating(true)
@@ -169,6 +235,7 @@ export default function GeneratorForm() {
   const tabs = [
     { id: 'content', label: 'Content', icon: FileText },
     { id: 'media', label: 'Media', icon: ImageIcon },
+    { id: 'quick', label: 'Quick Create', icon: Zap },
   ]
 
   return (
@@ -192,10 +259,24 @@ export default function GeneratorForm() {
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center">
                 <Wand2 className="w-4 h-4 text-white" />
               </div>
-              <div>
+              <div className="flex-1">
                 <h2 className="text-lg font-semibold text-secondary-900 dark:text-white">Create Your Ad</h2>
                 <p className="text-xs text-secondary-500">Generate {MAX_STATEMENTS} statements for a 30-second professional advertisement</p>
               </div>
+              <TemplateManager
+                currentSettings={{
+                  businessType: watch('businessType'),
+                  platform: watch('platform'),
+                  tone: watch('tone'),
+                  goal: watch('goal'),
+                  audience: watch('audience'),
+                  topic: watch('topic'),
+                  keywords: watch('keywords'),
+                  videoType: watch('videoType'),
+                  language: watch('language'),
+                }}
+                onLoad={onLoadTemplate}
+              />
             </div>
 
             <div className="grid sm:grid-cols-2 gap-4">
@@ -226,6 +307,18 @@ export default function GeneratorForm() {
               <div className="pt-2">
                 <p className="text-xs text-secondary-500 mb-2">Upload product images to showcase in your video ad</p>
                 <FileUpload onFilesChange={setUploadedFiles} maxFiles={5} />
+              </div>
+            )}
+
+            {activeTab === 'quick' && (
+              <div className="pt-2 space-y-3">
+                <p className="text-xs text-secondary-500">Describe your video in plain English. AI will auto-detect settings and generate everything.</p>
+                <textarea value={quickPrompt} onChange={(e) => setQuickPrompt(e.target.value)}
+                  placeholder='e.g. "Create a 60-second luxury coffee advertisement targeting young professionals on Instagram"'
+                  className="w-full h-28 rounded-xl bg-white/5 border border-white/10 text-white text-sm p-4 resize-none focus:outline-none focus:border-amber-500/40 focus:ring-1 focus:ring-amber-500/20" />
+                <Button onClick={quickCreate} className="w-full bg-gradient-to-r from-purple-600 to-pink-600" disabled={isQuickCreating}>
+                  {isQuickCreating ? <><RefreshCw className="w-4 h-4 mr-2 animate-spin" /> Creating...</> : <><Zap className="w-4 h-4 mr-2" /> Quick Create Video</>}
+                </Button>
               </div>
             )}
 

@@ -633,3 +633,54 @@ export function downloadBlob(blob, filename = 'advertisement') {
   document.body.removeChild(a)
   URL.revokeObjectURL(url)
 }
+
+export async function reencodeForFormat(blob, format, width = 1080, height = 1920) {
+  if (format === 'webm') return blob
+
+  const canvas = document.createElement('canvas')
+  canvas.width = width
+  canvas.height = height
+  const ctx = canvas.getContext('2d')
+
+  const video = document.createElement('video')
+  video.src = URL.createObjectURL(blob)
+  await video.play()
+
+  const stream = canvas.captureStream(30)
+  const mimeType = format === 'mp4' && MediaRecorder.isTypeSupported('video/mp4;codecs=h264')
+    ? 'video/mp4;codecs=h264'
+    : format === 'gif' ? 'video/webm' : 'video/webm'
+  const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 8000000 })
+  const chunks = []
+
+  return new Promise((resolve) => {
+    recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data) }
+    recorder.onstop = () => {
+      const ext = format === 'mp4' ? 'mp4' : format === 'gif' ? 'webm' : 'webm'
+      const type = format === 'mp4' ? 'video/mp4' : 'video/webm'
+      resolve(new Blob(chunks, { type }))
+    }
+    recorder.start()
+
+    const totalFrames = Math.floor(video.duration * 30)
+    let frame = 0
+    const render = () => {
+      if (frame >= totalFrames) { recorder.stop(); video.pause(); return }
+      ctx.drawImage(video, 0, 0, width, height)
+      frame++
+      requestAnimationFrame(render)
+    }
+    video.addEventListener('loadedmetadata', () => { render() })
+    video.addEventListener('ended', () => { if (recorder.state === 'recording') recorder.stop() })
+  })
+}
+
+export const EXPORT_PRESETS = [
+  { label: '1080p Vertical (9:16)', width: 1080, height: 1920, format: 'webm' },
+  { label: '720p Vertical (9:16)', width: 720, height: 1280, format: 'webm' },
+  { label: '1080p Landscape (16:9)', width: 1920, height: 1080, format: 'webm' },
+  { label: '720p Landscape (16:9)', width: 1280, height: 720, format: 'webm' },
+  { label: 'Square (1:1)', width: 1080, height: 1080, format: 'webm' },
+  { label: 'Portrait 4:5', width: 1080, height: 1350, format: 'webm' },
+  { label: 'MP4 1080p', width: 1080, height: 1920, format: 'mp4' },
+]

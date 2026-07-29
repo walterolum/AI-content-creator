@@ -6,16 +6,18 @@ import {
   isSpeaking, isPaused, voiceProfiles, musicGenres
 } from '../../lib/audio'
 import {
-  generateAdVideo, createVideoUrl, getScenesForContent
+  generateAdVideo, createVideoUrl, getScenesForContent, downloadBlob
 } from '../../lib/video'
 import { getSceneTimings, generateVoiceoverScript, getMusicSyncPoints } from '../../lib/scriptWriter'
 import VideoPlayer from './VideoPlayer'
+import ExportDialog from './ExportDialog'
 import StoryboardView from './StoryboardView'
 import {
   Play, Pause, Square, Music, Volume2,
   Film, RefreshCw, Sparkles, Smile,
   Edit3, Layers, Radio, Shuffle,
-  Layout, ArrowUp, ArrowDown, Trash2, Plus
+  Layout, ArrowUp, ArrowDown, Trash2, Plus,
+  Download
 } from 'lucide-react'
 
 const voiceStyleGroups = [
@@ -51,6 +53,8 @@ export default function AdEditor({ content: initialContent, script: initialScrip
   const [generationKey, setGenerationKey] = useState(0)
   const [selectedSceneId, setSelectedSceneId] = useState(null)
   const [editingSceneId, setEditingSceneId] = useState(null)
+  const [videoBlob, setVideoBlob] = useState(null)
+  const [showExport, setShowExport] = useState(false)
 
   const sceneTimerRef = useRef(null)
   const { addToast } = useToast()
@@ -115,6 +119,7 @@ export default function AdEditor({ content: initialContent, script: initialScrip
         images: files,
         scenes: scenes.length > 0 ? scenes : undefined,
       })
+      setVideoBlob(blob)
       const url = createVideoUrl(blob)
       if (videoUrl) URL.revokeObjectURL(videoUrl)
       setVideoUrl(url)
@@ -484,6 +489,12 @@ export default function AdEditor({ content: initialContent, script: initialScrip
                     </Button>
                   </div>
 
+                  {videoBlob && (
+                    <Button onClick={() => setShowExport(true)} size="sm" className="w-full bg-white/5 border border-white/10 text-white hover:bg-white/10">
+                      <Download className="w-3.5 h-3.5 mr-1.5" /> Export
+                    </Button>
+                  )}
+
                   <div className="bg-white/5 rounded-lg p-3 space-y-2">
                     <p className="text-[10px] text-gray-500 uppercase tracking-wider">Info</p>
                     <div className="flex justify-between text-xs"><span className="text-gray-400">Duration</span><span className="text-white font-medium">{totalDuration}s</span></div>
@@ -511,6 +522,13 @@ export default function AdEditor({ content: initialContent, script: initialScrip
           </div>
         )}
       </div>
+      {showExport && videoBlob && (
+        <ExportDialog
+          videoBlob={videoBlob}
+          onClose={() => setShowExport(false)}
+          filename={`ad_${Date.now()}`}
+        />
+      )}
     </div>
   )
 }
