@@ -215,7 +215,7 @@ IMPORTANT RULES:
 
       {/* Ad Editor - appears after generation */}
       {showEditor && generatedContent && (
-        <div className="max-w-4xl mx-auto animate-fade-in">
+        <div className="max-w-6xl mx-auto animate-fade-in">
           <AdEditor
             content={generatedContent}
             platform={watchedPlatform}

@@ -70,7 +70,7 @@ export function getScenesForContent(content) {
 }
 
 export async function generateAdVideo(content, platform = 'instagram', options = {}) {
-  const { duration = 30000, width = 1080, height = 1920, fps = 30, images = [] } = options
+  const { duration = 30000, width = 1080, height = 1920, fps = 60, images = [] } = options
 
   const theme = pickTheme()
   const canvas = document.createElement('canvas')
@@ -84,7 +84,7 @@ export async function generateAdVideo(content, platform = 'instagram', options =
   const driftSpeed = 0.001 + Math.random() * 0.002
 
   const stream = canvas.captureStream(fps)
-  const mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp9', videoBitsPerSecond: 8000000 })
+  const mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp9', videoBitsPerSecond: 12000000 })
   const chunks = []
   mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data) }
 
@@ -109,11 +109,11 @@ export async function generateAdVideo(content, platform = 'instagram', options =
       const nextScene = scenes[sceneIndex + 1]
 
       let fade = 1
-      if (nextScene && currentTime + 250 >= nextScene.startTime) {
-        fade = 1 - (currentTime - (nextScene.startTime - 250)) / 250
+      if (nextScene && currentTime + 400 >= nextScene.startTime) {
+        fade = 1 - (currentTime - (nextScene.startTime - 400)) / 400
       }
-      if (sceneProgress < 0.1) {
-        fade = Math.min(1, sceneProgress / 0.1)
+      if (sceneProgress < 0.15) {
+        fade = Math.min(1, sceneProgress / 0.15)
       }
 
       drawBackground(ctx, width, height, t, theme, motionPhase, driftSpeed)
@@ -201,18 +201,25 @@ function drawIntroScene(ctx, width, height, scene, progress, theme, loadedImages
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
 
-  ctx.font = 'bold 60px "Helvetica Neue", Arial, sans-serif'
+  ctx.font = 'bold 64px "Helvetica Neue", Arial, sans-serif'
   ctx.shadowColor = theme.accent
-  ctx.shadowBlur = 20
+  ctx.shadowBlur = 30
   ctx.fillStyle = theme.accent
+  ctx.shadowColor = 'rgba(0,0,0,0.5)'
+  ctx.shadowBlur = 8
+  ctx.shadowOffsetX = 2
+  ctx.shadowOffsetY = 2
   ctx.fillText(scene.title, width / 2, height * 0.26 + yOff)
 
-  ctx.shadowBlur = 0
-  ctx.font = '42px "Helvetica Neue", Arial, sans-serif'
+  ctx.shadowColor = 'rgba(0,0,0,0.4)'
+  ctx.shadowBlur = 6
+  ctx.shadowOffsetX = 1
+  ctx.shadowOffsetY = 1
+  ctx.font = '44px "Helvetica Neue", Arial, sans-serif'
   ctx.fillStyle = theme.text
 
   const subtitleLines = wrapText(ctx, scene.subtitle, width * 0.82)
-  const lineHeight = 56
+  const lineHeight = 58
   const startY = height * 0.40 - (subtitleLines.length * lineHeight) / 2 + yOff * 0.5
   subtitleLines.forEach((line, i) => {
     const la = Math.min(1, (progress * subtitleLines.length - i) * 1.3)
@@ -224,15 +231,15 @@ function drawIntroScene(ctx, width, height, scene, progress, theme, loadedImages
 
   if (loadedImages.length > 0) {
     const img = loadedImages[0].image
-    const s = 150; const x = (width - s) / 2
+    const s = 160; const x = (width - s) / 2
     const y = height * 0.62 + yOff * 0.3
     const ia = Math.min(1, progress * 2)
     ctx.save()
     ctx.globalAlpha = ia
-    ctx.shadowColor = 'rgba(0,0,0,0.4)'
-    ctx.shadowBlur = 20
-    ctx.shadowOffsetY = 5
-    ctx.beginPath(); ctx.roundRect(x, y, s, s, 18); ctx.clip()
+    ctx.shadowColor = 'rgba(0,0,0,0.5)'
+    ctx.shadowBlur = 25
+    ctx.shadowOffsetY = 6
+    ctx.beginPath(); ctx.roundRect(x, y, s, s, 20); ctx.clip()
     ctx.drawImage(img, x, y, s, s)
     ctx.restore()
   }
@@ -248,18 +255,23 @@ function drawProblemScene(ctx, width, height, scene, progress, theme, loadedImag
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
 
-  ctx.font = 'bold 36px "Helvetica Neue", Arial, sans-serif'
-  ctx.shadowColor = 'rgba(255,180,50,0.15)'
+  ctx.font = 'bold 40px "Helvetica Neue", Arial, sans-serif'
+  ctx.shadowColor = 'rgba(0,0,0,0.4)'
   ctx.shadowBlur = 6
+  ctx.shadowOffsetX = 1
+  ctx.shadowOffsetY = 1
   ctx.fillStyle = theme.accent
   ctx.fillText(scene.title, width / 2 - slide * 0.3, height * 0.18)
 
-  ctx.shadowBlur = 0
+  ctx.shadowColor = 'rgba(0,0,0,0.35)'
+  ctx.shadowBlur = 4
+  ctx.shadowOffsetX = 1
+  ctx.shadowOffsetY = 1
   const words = scene.text.split(' ')
   const wc = Math.floor(words.length * Math.min(1, progress * 1.2))
   const vt = words.slice(0, wc).join(' ')
   const lines = wrapText(ctx, vt, width * 0.8)
-  const lineHeight = 52
+  const lineHeight = 54
   const startY = height * 0.40 - (lines.length * lineHeight) / 2 - slide * 0.1
 
   lines.forEach((line, i) => {
@@ -273,14 +285,15 @@ function drawProblemScene(ctx, width, height, scene, progress, theme, loadedImag
 
   if (loadedImages.length > 0) {
     const img = loadedImages[0].image
-    const s = 160; const x = (width - s) / 2; const y = height * 0.66
+    const s = 170; const x = (width - s) / 2; const y = height * 0.66
     const ia = Math.min(1, (progress - 0.15) * 2)
     if (ia > 0) {
       ctx.save()
       ctx.globalAlpha = ia * alpha * 0.5
-      ctx.shadowColor = 'rgba(0,0,0,0.3)'
-      ctx.shadowBlur = 12
-      ctx.beginPath(); ctx.roundRect(x, y, s, s, 14); ctx.clip()
+      ctx.shadowColor = 'rgba(0,0,0,0.4)'
+      ctx.shadowBlur = 15
+      ctx.shadowOffsetY = 4
+      ctx.beginPath(); ctx.roundRect(x, y, s, s, 16); ctx.clip()
       ctx.drawImage(img, x, y, s, s)
       ctx.restore()
     }
@@ -297,18 +310,23 @@ function drawSolutionScene(ctx, width, height, scene, progress, theme, loadedIma
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
 
-  ctx.font = 'bold 48px "Helvetica Neue", Arial, sans-serif'
-  ctx.shadowColor = theme.glow
-  ctx.shadowBlur = 18
+  ctx.font = 'bold 52px "Helvetica Neue", Arial, sans-serif'
+  ctx.shadowColor = 'rgba(0,0,0,0.5)'
+  ctx.shadowBlur = 10
+  ctx.shadowOffsetX = 2
+  ctx.shadowOffsetY = 2
   ctx.fillStyle = theme.accent
   ctx.fillText(scene.title, width / 2, height * 0.18 + yOff)
 
-  ctx.shadowBlur = 0
+  ctx.shadowColor = 'rgba(0,0,0,0.35)'
+  ctx.shadowBlur = 5
+  ctx.shadowOffsetX = 1
+  ctx.shadowOffsetY = 1
   const words = scene.text.split(' ')
   const wc = Math.floor(words.length * Math.min(1, progress * 1.1))
   const vt = words.slice(0, wc).join(' ')
   const lines = wrapText(ctx, vt, width * 0.78)
-  const lineHeight = 50
+  const lineHeight = 52
   const startY = height * 0.36 - (lines.length * lineHeight) / 2 + yOff * 0.5
 
   lines.forEach((line, i) => {
@@ -322,16 +340,16 @@ function drawSolutionScene(ctx, width, height, scene, progress, theme, loadedIma
 
   if (loadedImages.length > 0) {
     const img = loadedImages[0].image
-    const s = 200; const x = (width - s) / 2
+    const s = 220; const x = (width - s) / 2
     const y = height * 0.66 + yOff * 0.3
     const ia = Math.min(1, (progress - 0.2) * 2.5)
     if (ia > 0) {
       ctx.save()
       ctx.globalAlpha = ia * alpha
-      ctx.shadowColor = 'rgba(0,0,0,0.4)'
-      ctx.shadowBlur = 25
-      ctx.shadowOffsetY = 6
-      ctx.beginPath(); ctx.roundRect(x, y, s, s, 20); ctx.clip()
+      ctx.shadowColor = 'rgba(0,0,0,0.5)'
+      ctx.shadowBlur = 30
+      ctx.shadowOffsetY = 8
+      ctx.beginPath(); ctx.roundRect(x, y, s, s, 22); ctx.clip()
       ctx.drawImage(img, x, y, s, s)
       ctx.restore()
     }
@@ -347,11 +365,13 @@ function drawCTAScene(ctx, width, height, scene, progress, theme, loadedImages, 
   ctx.save()
   ctx.globalAlpha = alpha
 
-  ctx.font = 'bold 52px "Helvetica Neue", Arial, sans-serif'
+  ctx.font = 'bold 56px "Helvetica Neue", Arial, sans-serif'
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
-  ctx.shadowColor = theme.accent
-  ctx.shadowBlur = glowP
+  ctx.shadowColor = 'rgba(0,0,0,0.5)'
+  ctx.shadowBlur = 12
+  ctx.shadowOffsetX = 2
+  ctx.shadowOffsetY = 2
   ctx.fillStyle = theme.accent
   ctx.save()
   ctx.translate(width / 2, height * 0.28)
@@ -359,11 +379,14 @@ function drawCTAScene(ctx, width, height, scene, progress, theme, loadedImages, 
   ctx.fillText(scene.title, 0, 0)
   ctx.restore()
 
-  ctx.shadowBlur = 0
-  ctx.font = '36px "Helvetica Neue", Arial, sans-serif'
+  ctx.shadowColor = 'rgba(0,0,0,0.3)'
+  ctx.shadowBlur = 4
+  ctx.shadowOffsetX = 1
+  ctx.shadowOffsetY = 1
+  ctx.font = '38px "Helvetica Neue", Arial, sans-serif'
   ctx.fillStyle = theme.text
   const lines = wrapText(ctx, scene.subtitle, width * 0.78)
-  const lineHeight = 46
+  const lineHeight = 48
   lines.forEach((line, i) => {
     ctx.save()
     ctx.globalAlpha = alpha * Math.max(0, 1 - i * 0.1)
@@ -373,7 +396,7 @@ function drawCTAScene(ctx, width, height, scene, progress, theme, loadedImages, 
 
   ctx.strokeStyle = theme.accent
   ctx.lineWidth = 2
-  ctx.shadowColor = theme.accent
+  ctx.shadowColor = 'rgba(0,0,0,0.4)'
   ctx.shadowBlur = 6
   const bw = 80 + Math.sin(t * 2) * 10
   ctx.beginPath(); ctx.moveTo(width / 2 - bw, height * 0.36); ctx.lineTo(width / 2 + bw, height * 0.36); ctx.stroke()
@@ -382,12 +405,12 @@ function drawCTAScene(ctx, width, height, scene, progress, theme, loadedImages, 
 
   if (loadedImages.length > 1) {
     const img = loadedImages[1].image
-    const s = 100; const x = (width - s) / 2; const y = height * 0.68
+    const s = 110; const x = (width - s) / 2; const y = height * 0.68
     const ia = Math.min(1, progress * 2)
     ctx.save()
     ctx.globalAlpha = ia * alpha
-    ctx.shadowColor = 'rgba(0,0,0,0.3)'; ctx.shadowBlur = 10
-    ctx.beginPath(); ctx.roundRect(x, y, s, s, 12); ctx.clip()
+    ctx.shadowColor = 'rgba(0,0,0,0.4)'; ctx.shadowBlur = 15; ctx.shadowOffsetY = 4
+    ctx.beginPath(); ctx.roundRect(x, y, s, s, 14); ctx.clip()
     ctx.drawImage(img, x, y, s, s)
     ctx.restore()
   }
@@ -406,16 +429,21 @@ function drawOutroScene(ctx, width, height, scene, progress, theme, loadedImages
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
 
-  ctx.font = 'bold 52px "Helvetica Neue", Arial, sans-serif'
-  ctx.shadowColor = theme.accent
-  ctx.shadowBlur = 16
+  ctx.font = 'bold 56px "Helvetica Neue", Arial, sans-serif'
+  ctx.shadowColor = 'rgba(0,0,0,0.5)'
+  ctx.shadowBlur = 10
+  ctx.shadowOffsetX = 2
+  ctx.shadowOffsetY = 2
   ctx.fillStyle = theme.accent
   ctx.fillText(scene.title, 0, 0)
 
-  ctx.shadowBlur = 0
-  ctx.font = '34px "Helvetica Neue", Arial, sans-serif'
+  ctx.shadowColor = 'rgba(0,0,0,0.35)'
+  ctx.shadowBlur = 5
+  ctx.shadowOffsetX = 1
+  ctx.shadowOffsetY = 1
+  ctx.font = '36px "Helvetica Neue", Arial, sans-serif'
   ctx.fillStyle = theme.text
-  ctx.fillText(scene.subtitle, 0, 74)
+  ctx.fillText(scene.subtitle, 0, 78)
   ctx.restore()
 
   const fade = Math.max(0, 1 - (1 - progress) * 4)
@@ -429,27 +457,33 @@ function drawOutroScene(ctx, width, height, scene, progress, theme, loadedImages
 }
 
 function drawCaptionBar(ctx, width, height, scene, progress, theme) {
-  const y = height - 165
-  const h = 85
+  const y = height - 180
+  const h = 90
 
-  ctx.fillStyle = 'rgba(0,0,0,0.6)'
+  ctx.fillStyle = 'rgba(0,0,0,0.7)'
   ctx.beginPath()
-  ctx.roundRect(35, y, width - 70, h, 14)
+  ctx.roundRect(30, y, width - 60, h, 16)
   ctx.fill()
+
+  ctx.strokeStyle = 'rgba(255,255,255,0.08)'
+  ctx.lineWidth = 1
+  ctx.beginPath(); ctx.roundRect(30, y, width - 60, h, 16); ctx.stroke()
 
   const words = scene.text.split(' ')
   const wc = Math.floor(words.length * Math.min(1, progress * 1.08))
   const ct = words.slice(0, wc).join(' ')
 
-  ctx.font = '28px "Helvetica Neue", Arial, sans-serif'
+  ctx.font = '30px "Helvetica Neue", Arial, sans-serif'
   ctx.textAlign = 'center'
   ctx.fillStyle = '#ffffff'
-  ctx.shadowColor = 'rgba(0,0,0,0.3)'
-  ctx.shadowBlur = 2
+  ctx.shadowColor = 'rgba(0,0,0,0.4)'
+  ctx.shadowBlur = 3
+  ctx.shadowOffsetX = 1
+  ctx.shadowOffsetY = 1
 
   const lines = wrapText(ctx, ct, width - 110)
   lines.slice(0, 2).forEach((line, i) => {
-    ctx.fillText(line, width / 2, y + 33 + i * 36)
+    ctx.fillText(line, width / 2, y + 36 + i * 38)
   })
   ctx.shadowBlur = 0
 }

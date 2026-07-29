@@ -314,14 +314,13 @@ export default function AdEditor({ content: initialContent, platform, images, on
         )}
 
         {activeSection === 'video' && (
-          <div className="space-y-4">
-            <div className="flex items-center gap-2 mb-1">
-              <Film className="w-4 h-4 text-purple-500" />
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Video Ad (30s)</p>
-            </div>
-
+          <div>
             {!showVideo ? (
-              <div>
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 mb-1">
+                  <Film className="w-4 h-4 text-purple-500" />
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Video Ad (30s)</p>
+                </div>
                 <div className="grid grid-cols-3 gap-2 mb-4">
                   <div className="p-3 bg-white/5 rounded-xl text-center">
                     <p className="text-[10px] text-purple-300">Duration</p>
@@ -359,29 +358,47 @@ export default function AdEditor({ content: initialContent, platform, images, on
                 </Button>
               </div>
             ) : (
-              <div className="space-y-3">
-                <div onPlay={handlePlayVideoWithVoice}>
-                  <VideoPlayer
-                    key={generationKey}
-                    src={videoUrl}
-                    onStop={handleStopVideo}
-                    onNew={handleNewVideo}
-                  />
-                </div>
-
-                {currentCaption && (
-                  <div className="bg-black/60 backdrop-blur rounded-lg p-2.5 border border-white/10">
-                    <p className="text-center text-white text-xs font-medium">{currentCaption}</p>
+              <div className="flex flex-col lg:flex-row gap-6">
+                <div className="flex-1 min-w-0">
+                  <div onPlay={handlePlayVideoWithVoice} className="w-full">
+                    <VideoPlayer
+                      key={generationKey}
+                      src={videoUrl}
+                      onStop={handleStopVideo}
+                      onNew={handleNewVideo}
+                    />
                   </div>
-                )}
+                </div>
+                <div className="w-full lg:w-64 shrink-0 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Film className="w-4 h-4 text-purple-500" />
+                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Video Ad (30s)</p>
+                  </div>
 
-                <div className="grid grid-cols-2 gap-2">
-                  <Button onClick={handleNewVideo} className="bg-gradient-to-r from-amber-600 to-orange-600" size="sm">
-                    <Shuffle className="w-4 h-4 mr-1.5" /> Generate New
-                  </Button>
-                  <Button onClick={handleStopVideo} variant="ghost" size="sm" className="text-white border border-white/20">
-                    <Square className="w-4 h-4 mr-1.5" /> Stop
-                  </Button>
+                  {currentCaption && (
+                    <div className="bg-black/60 backdrop-blur rounded-lg p-3 border border-white/10">
+                      <p className="text-[10px] text-gray-500 mb-1 uppercase tracking-wider">Current Caption</p>
+                      <p className="text-white text-sm font-medium leading-relaxed">{currentCaption}</p>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button onClick={handleNewVideo} className="bg-gradient-to-r from-amber-600 to-orange-600" size="sm">
+                      <Shuffle className="w-4 h-4 mr-1.5" /> New
+                    </Button>
+                    <Button onClick={handleStopVideo} variant="ghost" size="sm" className="text-white border border-white/20">
+                      <Square className="w-4 h-4 mr-1.5" /> Stop
+                    </Button>
+                  </div>
+
+                  <div className="bg-white/5 rounded-lg p-3 space-y-2">
+                    <p className="text-[10px] text-gray-500 uppercase tracking-wider">Info</p>
+                    <div className="flex justify-between text-xs"><span className="text-gray-400">Duration</span><span className="text-white font-medium">30s</span></div>
+                    <div className="flex justify-between text-xs"><span className="text-gray-400">FPS</span><span className="text-white font-medium">60</span></div>
+                    <div className="flex justify-between text-xs"><span className="text-gray-400">Quality</span><span className="text-white font-medium">HD</span></div>
+                    <div className="flex justify-between text-xs"><span className="text-gray-400">Theme</span><span className="text-amber-400 font-medium">Random</span></div>
+                    <div className="flex justify-between text-xs"><span className="text-gray-400">Bitrate</span><span className="text-white font-medium">12 Mbps</span></div>
+                  </div>
                 </div>
               </div>
             )}

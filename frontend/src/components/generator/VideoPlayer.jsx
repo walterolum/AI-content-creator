@@ -2,7 +2,6 @@ import { useRef, useState, useEffect, useCallback } from 'react'
 import {
   Play, Pause, Square, Maximize2, Minimize2,
   Volume2, Volume1, VolumeX, Download,
-  SkipBack, SkipForward
 } from 'lucide-react'
 
 export default function VideoPlayer({ src, onStop, onNew }) {
@@ -143,62 +142,59 @@ export default function VideoPlayer({ src, onStop, onNew }) {
   return (
     <div
       ref={containerRef}
-      className={`relative rounded-xl overflow-hidden bg-black select-none ${maximized ? 'fixed inset-0 z-50 rounded-none' : ''}`}
+      className={`relative overflow-hidden bg-black select-none ${maximized ? 'fixed inset-0 z-50 rounded-none' : 'w-full rounded-xl'}`}
       onMouseMove={handleMouseMove}
       onMouseLeave={() => playing && setShowControls(false)}
     >
-      <video
-        ref={videoRef}
-        src={src}
-        className="w-full h-full object-contain cursor-pointer"
-        onClick={togglePlay}
-        playsInline
-        style={{ maxHeight: maximized ? '100vh' : '460px' }}
-      />
+      <div className={`relative ${maximized ? '' : 'w-full'} ${maximized ? 'h-full' : ''}`}>
+        <video
+          ref={videoRef}
+          src={src}
+          className="w-full h-full object-contain cursor-pointer"
+          onClick={togglePlay}
+          playsInline
+          preload="auto"
+        />
+      </div>
 
       {/* Center play button overlay */}
       {!playing && (
         <div className="absolute inset-0 flex items-center justify-center cursor-pointer" onClick={togglePlay}>
-          <div className="w-16 h-16 rounded-full bg-white/20 backdrop-blur flex items-center justify-center hover:bg-white/30 transition-all">
-            <Play className="w-8 h-8 text-white ml-1" />
+          <div className="w-20 h-20 rounded-full bg-white/15 backdrop-blur flex items-center justify-center hover:bg-white/25 transition-all hover:scale-105">
+            <Play className="w-10 h-10 text-white ml-1" />
           </div>
         </div>
       )}
 
       {/* Controls overlay */}
-      <div className={`absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent pt-12 pb-3 px-4 transition-opacity duration-300 ${showControls ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+      <div className={`absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/95 via-black/60 to-transparent pt-14 pb-4 px-5 transition-opacity duration-300 ${showControls ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
         {/* Progress bar */}
-        <div ref={progressRef} className="relative h-6 group cursor-pointer mb-2" onClick={handleSeek}>
-          <div className="absolute top-1/2 -translate-y-1/2 left-0 right-0 h-1 bg-white/20 rounded-full">
-            <div className="absolute h-full bg-white/15 rounded-full" style={{ width: `${duration > 0 ? (buffered / duration) * 100 : 0}%` }} />
-            <div className="absolute h-full bg-gradient-to-r from-amber-400 to-amber-600 rounded-full" style={{ width: `${progress * 100}%` }} />
-            <div className="absolute top-1/2 -translate-y-1/2 w-3.5 h-3.5 bg-white rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity" style={{ left: `${progress * 100}%`, marginLeft: '-7px' }} />
+        <div ref={progressRef} className="relative h-7 group cursor-pointer mb-3" onClick={handleSeek}>
+          <div className="absolute top-1/2 -translate-y-1/2 left-0 right-0 h-1.5 bg-white/15 rounded-full group-hover:h-2 transition-all">
+            <div className="absolute h-full bg-white/10 rounded-full" style={{ width: `${duration > 0 ? (buffered / duration) * 100 : 0}%` }} />
+            <div className="absolute h-full bg-gradient-to-r from-amber-400 to-amber-500 rounded-full" style={{ width: `${progress * 100}%` }} />
+            <div className="absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-white rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity" style={{ left: `${progress * 100}%`, marginLeft: '-8px' }} />
           </div>
         </div>
 
         {/* Controls row */}
         <div className="flex items-center gap-3">
-          {/* Play/Pause */}
           <button onClick={togglePlay} className="text-white hover:text-amber-400 transition-colors">
             {playing ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
           </button>
 
-          {/* Stop */}
-          <button onClick={handleStop} className="text-white/70 hover:text-white transition-colors">
+          <button onClick={handleStop} className="text-white/60 hover:text-white transition-colors">
             <Square className="w-4 h-4" />
           </button>
 
-          {/* Time */}
-          <span className="text-xs text-white/70 font-mono min-w-[80px]">
+          <span className="text-xs text-white/60 font-mono min-w-[88px] tracking-wide">
             {formatTime(currentTime)} / {formatTime(duration)}
           </span>
 
-          {/* Spacer */}
           <div className="flex-1" />
 
-          {/* Volume */}
           <div className="flex items-center gap-1.5 group/vol">
-            <button onClick={toggleMute} className="text-white/70 hover:text-white transition-colors">
+            <button onClick={toggleMute} className="text-white/60 hover:text-white transition-colors">
               {muted || volume === 0 ? <VolumeX className="w-4 h-4" /> : volume < 0.5 ? <Volume1 className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
             </button>
             <div className="w-0 group-hover/vol:w-20 overflow-hidden transition-all duration-200">
@@ -207,16 +203,15 @@ export default function VideoPlayer({ src, onStop, onNew }) {
             </div>
           </div>
 
-          {/* Speed */}
           <div className="relative">
-            <button onClick={() => setShowSpeedMenu(!showSpeedMenu)} className="text-xs font-mono text-white/70 hover:text-white transition-colors px-1.5 py-0.5 rounded bg-white/10">
+            <button onClick={() => setShowSpeedMenu(!showSpeedMenu)} className="text-xs font-mono text-white/60 hover:text-white transition-colors px-2 py-0.5 rounded bg-white/10">
               {playbackRate}x
             </button>
             {showSpeedMenu && (
               <div className="absolute bottom-full mb-2 right-0 bg-black/90 backdrop-blur rounded-lg border border-white/10 py-1 min-w-[72px] shadow-xl">
                 {speeds.map(s => (
                   <button key={s} onClick={() => changeRate(s)}
-                    className={`w-full px-3 py-1.5 text-xs text-left transition-colors ${playbackRate === s ? 'text-amber-400 bg-white/10' : 'text-white/70 hover:text-white hover:bg-white/5'}`}>
+                    className={`w-full px-3 py-1.5 text-xs text-left transition-colors ${playbackRate === s ? 'text-amber-400 bg-white/10' : 'text-white/60 hover:text-white hover:bg-white/5'}`}>
                     {s}x
                   </button>
                 ))}
@@ -224,27 +219,23 @@ export default function VideoPlayer({ src, onStop, onNew }) {
             )}
           </div>
 
-          {/* Maximize/Minimize */}
-          <button onClick={toggleMaximize} className="text-white/70 hover:text-white transition-colors">
+          <button onClick={toggleMaximize} className="text-white/60 hover:text-white transition-colors">
             {maximized ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
           </button>
 
-          {/* Fullscreen */}
-          <button onClick={handleFullscreen} className="text-white/70 hover:text-white transition-colors">
+          <button onClick={handleFullscreen} className="text-white/60 hover:text-white transition-colors">
             <Maximize2 className="w-4 h-4" />
           </button>
 
-          {/* Download */}
-          <a href={src} download="advertisement.webm" className="text-white/70 hover:text-white transition-colors">
+          <a href={src} download="advertisement.webm" className="text-white/60 hover:text-white transition-colors">
             <Download className="w-4 h-4" />
           </a>
         </div>
       </div>
 
-      {/* Maximized close bar */}
       {maximized && (
-        <div className="absolute top-3 right-3 z-10">
-          <button onClick={toggleMaximize} className="bg-black/50 backdrop-blur rounded-lg p-2 text-white/70 hover:text-white transition-colors">
+        <div className="absolute top-4 right-4 z-10">
+          <button onClick={toggleMaximize} className="bg-black/50 backdrop-blur rounded-lg p-2.5 text-white/60 hover:text-white transition-colors hover:bg-black/70">
             <Minimize2 className="w-4 h-4" />
           </button>
         </div>
