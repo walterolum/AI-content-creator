@@ -70,14 +70,14 @@ export function getScenesForContent(content) {
 }
 
 export async function generateAdVideo(content, platform = 'instagram', options = {}) {
-  const { duration = 30000, width = 1080, height = 1920, fps = 60, images = [] } = options
+  const { duration = 30000, width = 1080, height = 1920, fps = 60, images = [], scenes: providedScenes } = options
 
   const theme = pickTheme()
   const canvas = document.createElement('canvas')
   canvas.width = width; canvas.height = height
   const ctx = canvas.getContext('2d')
 
-  const scenes = parseContentToScenes(content)
+  const scenes = providedScenes && providedScenes.length > 0 ? providedScenes.map(s => normalizeScene(s)) : parseContentToScenes(content)
   const loadedImages = await loadImages(images)
 
   const motionPhase = Math.random() * Math.PI * 2
@@ -92,7 +92,7 @@ export async function generateAdVideo(content, platform = 'instagram', options =
     mediaRecorder.onstop = () => resolve(new Blob(chunks, { type: 'video/webm' }))
     mediaRecorder.start()
 
-    const totalFrames = Math.floor((duration / 1000) * fps)
+    const totalFrames = Math.floor(((providedScenes && providedScenes.length > 0 ? scenes.reduce((sum, s) => sum + s.duration, 0) : duration) / 1000) * fps)
     let frame = 0
 
     const animate = () => {
@@ -516,6 +516,22 @@ function wrapText(ctx, text, maxWidth) {
 }
 
 function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3) }
+
+function normalizeScene(s, index, allScenes) {
+  const prevEnd = index > 0 ? allScenes.slice(0, index).reduce((sum, sc) => sum + (sc.duration || 5), 0) : 0
+  return {
+    id: s.id || `scene-${index + 1}`,
+    type: s.type === 'opening' ? 'intro' : s.type === 'closing' ? 'outro' : s.type === 'cta' ? 'cta' : s.type === 'problem' ? 'problem' : s.type === 'solution' ? 'solution' : s.type === 'feature' ? 'solution' : s.type === 'testimonial' ? 'solution' : 'intro',
+    title: s.onScreenText || s.title || '',
+    subtitle: s.narration || s.subtitle || '',
+    text: s.narration || s.text || '',
+    voiceText: s.narration || '',
+    duration: (s.duration || 5) * 1000,
+    startTime: prevEnd * 1000,
+    keywords: [],
+    original: s,
+  }
+}
 
 export function createVideoUrl(blob) {
   return URL.createObjectURL(blob)

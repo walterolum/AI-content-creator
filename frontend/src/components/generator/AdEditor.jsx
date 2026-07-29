@@ -8,28 +8,33 @@ import {
 import {
   generateAdVideo, createVideoUrl, getScenesForContent
 } from '../../lib/video'
+import { getSceneTimings, generateVoiceoverScript } from '../../lib/scriptWriter'
 import VideoPlayer from './VideoPlayer'
+import StoryboardView from './StoryboardView'
 import {
   Play, Pause, Square, Music, Volume2,
   Film, RefreshCw, Sparkles, Smile,
-  Edit3, Layers, Radio, Shuffle
+  Edit3, Layers, Radio, Shuffle,
+  Layout, ArrowUp, ArrowDown, Trash2, Plus
 } from 'lucide-react'
 
 const voiceStyleGroups = [
-  { label: '🎙️ Radio & Presenter', ids: ['radio-presenter', 'news-anchor', 'friendly-host', 'storyteller'] },
-  { label: '📢 Advertiser & Promo', ids: ['advertiser-male', 'advertiser-female', 'energetic-promo'] },
-  { label: '🏢 Corporate & Professional', ids: ['corporate-narrator', 'professional-male', 'professional-female'] },
-  { label: '🎬 Cinematic & Luxury', ids: ['luxury-brand', 'documentary-narrator'] },
-  { label: '🌍 African Voices', ids: ['nigerian-male', 'nigerian-female', 'kenyan-male', 'kenyan-female', 'south-african-male', 'south-african-female'] },
+  { label: 'Radio & Presenter', ids: ['radio-presenter', 'news-anchor', 'friendly-host', 'storyteller'] },
+  { label: 'Advertiser & Promo', ids: ['advertiser-male', 'advertiser-female', 'energetic-promo'] },
+  { label: 'Corporate & Professional', ids: ['corporate-narrator', 'professional-male', 'professional-female'] },
+  { label: 'Cinematic & Luxury', ids: ['luxury-brand', 'documentary-narrator'] },
+  { label: 'African Voices', ids: ['nigerian-male', 'nigerian-female', 'kenyan-male', 'kenyan-female', 'south-african-male', 'south-african-female'] },
 ]
 
-export default function AdEditor({ content: initialContent, platform, images, onClose }) {
-  const [content, setContent] = useState(initialContent)
-  const [selectedVoice, setSelectedVoice] = useState('radio-presenter')
+export default function AdEditor({ content: initialContent, script: initialScript, platform, images, onClose }) {
+  const [content, setContent] = useState(() => initialScript ? generateVoiceoverScript(initialScript) : initialContent)
+  const [script, setScript] = useState(initialScript)
+  const [scenes, setScenes] = useState(() => initialScript?.scenes?.map((s, i) => ({ ...s, id: s.id || `scene-${i + 1}` })) || [])
+  const [selectedVoice, setSelectedVoice] = useState(initialScript?.voiceProfile || 'radio-presenter')
   const [speaking, setSpeaking] = useState(false)
   const [paused, setPaused] = useState(false)
   const [withMusic, setWithMusic] = useState(true)
-  const [musicGenre, setMusicGenre] = useState('cinematic')
+  const [musicGenre, setMusicGenre] = useState(initialScript?.musicGenre || 'cinematic')
   const [voiceVolume, setVoiceVolume] = useState(1)
   const [musicVolume, setMusicVolume] = useState(0.3)
   const [useReverb, setUseReverb] = useState(false)
@@ -44,6 +49,8 @@ export default function AdEditor({ content: initialContent, platform, images, on
   const [videoProgress, setVideoProgress] = useState(0)
   const [adPlaying, setAdPlaying] = useState(false)
   const [generationKey, setGenerationKey] = useState(0)
+  const [selectedSceneId, setSelectedSceneId] = useState(null)
+  const [editingSceneId, setEditingSceneId] = useState(null)
 
   const sceneTimerRef = useRef(null)
   const { addToast } = useToast()
@@ -66,24 +73,27 @@ export default function AdEditor({ content: initialContent, platform, images, on
       else pauseSpeech()
       return
     }
-    const scenes = getScenesForContent(content)
+    const textToSpeak = content || scenes.map(s => s.narration).filter(Boolean).join('. ')
+    if (!textToSpeak) { addToast('No content to speak', 'error'); return }
+    const activeScenes = scenes.filter(s => s.type !== 'closing')
+    if (activeScenes.length > 0) {
+      setCurrentCaption(activeScenes[0].narration || activeScenes[0].onScreenText)
+    }
     let idx = 0
-    setCurrentCaption(scenes[0]?.text || '')
     const updateCaption = () => {
       idx++
-      if (idx < scenes.length) {
-        setCurrentCaption(scenes[idx].text)
-        sceneTimerRef.current = setTimeout(updateCaption, scenes[idx].duration)
+      if (idx < activeScenes.length) {
+        setCurrentCaption(activeScenes[idx].narration || activeScenes[idx].onScreenText)
+        sceneTimerRef.current = setTimeout(updateCaption, (activeScenes[idx].duration || 5) * 1000)
       }
     }
-    sceneTimerRef.current = setTimeout(updateCaption, scenes[0]?.duration || 7000)
-    speak(content, selectedVoice, {
-      withMusic, musicGenre,
+    sceneTimerRef.current = setTimeout(updateCaption, (activeScenes[0]?.duration || 5) * 1000)
+    speak(textToSpeak, selectedVoice, {
+      withMusic, musicGenre, voiceVolume, musicVolume, useReverb, useEcho,
       onEnd: () => { setSpeaking(false); setAdPlaying(false); setCurrentCaption(''); clearTimeout(sceneTimerRef.current) },
-      voiceVolume, musicVolume, useReverb, useEcho,
     })
     setSpeaking(true); setAdPlaying(true)
-  }, [content, selectedVoice, withMusic, musicGenre, voiceVolume, musicVolume, useReverb, useEcho, speaking, paused, addToast])
+  }, [content, scenes, selectedVoice, withMusic, musicGenre, voiceVolume, musicVolume, useReverb, useEcho, speaking, paused, addToast])
 
   const handleStopAd = () => {
     stopSpeech()
@@ -92,13 +102,17 @@ export default function AdEditor({ content: initialContent, platform, images, on
   }
 
   const renderVideo = async () => {
-    if (!content) { addToast('No content to render', 'error'); return }
+    const textContent = content || scenes.map(s => s.narration).filter(Boolean).join('. ')
+    if (!textContent) { addToast('No content to render', 'error'); return }
     setIsGeneratingVideo(true)
     setVideoProgress(0)
     const pi = setInterval(() => { setVideoProgress(prev => Math.min(prev + 4, 90)) }, 400)
     try {
       const files = images ? images.map(f => f.file) : []
-      const blob = await generateAdVideo(content, platform || 'instagram', { images: files })
+      const blob = await generateAdVideo(textContent, platform || 'instagram', {
+        images: files,
+        scenes: scenes.length > 0 ? scenes : undefined,
+      })
       const url = createVideoUrl(blob)
       if (videoUrl) URL.revokeObjectURL(videoUrl)
       setVideoUrl(url)
@@ -117,29 +131,28 @@ export default function AdEditor({ content: initialContent, platform, images, on
     if (adPlaying) return
     setAdPlaying(true)
     setTimeout(() => {
-      const scenes = getScenesForContent(content)
+      const activeScenes = scenes.filter(s => s.type !== 'closing')
+      if (activeScenes.length > 0) {
+        setCurrentCaption(activeScenes[0].narration || activeScenes[0].onScreenText)
+      }
       let idx = 0
-      setCurrentCaption(scenes[0]?.text || '')
       const updateCaption = () => {
         idx++
-        if (idx < scenes.length) {
-          setCurrentCaption(scenes[idx].text)
-          sceneTimerRef.current = setTimeout(updateCaption, scenes[idx].duration)
+        if (idx < activeScenes.length) {
+          setCurrentCaption(activeScenes[idx].narration || activeScenes[idx].onScreenText)
+          sceneTimerRef.current = setTimeout(updateCaption, (activeScenes[idx].duration || 5) * 1000)
         }
       }
-      sceneTimerRef.current = setTimeout(updateCaption, scenes[0]?.duration || 7000)
-      speak(content, selectedVoice, {
-        withMusic, musicGenre,
+      sceneTimerRef.current = setTimeout(updateCaption, (activeScenes[0]?.duration || 5) * 1000)
+      speak(content || scenes.map(s => s.narration).filter(Boolean).join('. '), selectedVoice, {
+        withMusic, musicGenre, voiceVolume, musicVolume, useReverb, useEcho,
         onEnd: () => { setSpeaking(false); setCurrentCaption(''); clearTimeout(sceneTimerRef.current); setAdPlaying(false) },
-        voiceVolume, musicVolume, useReverb, useEcho,
       })
       setSpeaking(true)
     }, 300)
   }
 
-  const handleStopVideo = () => {
-    handleStopAd()
-  }
+  const handleStopVideo = () => { handleStopAd() }
 
   const handleNewVideo = () => {
     setShowVideo(false)
@@ -148,11 +161,32 @@ export default function AdEditor({ content: initialContent, platform, images, on
     renderVideo()
   }
 
+  const moveScene = (index, direction) => {
+    const newScenes = [...scenes]
+    const target = index + direction
+    if (target < 0 || target >= newScenes.length) return
+    ;[newScenes[index], newScenes[target]] = [newScenes[target], newScenes[index]]
+    setScenes(newScenes)
+  }
+
+  const removeScene = (id) => {
+    if (scenes.length <= 2) { addToast('Need at least 2 scenes', 'error'); return }
+    setScenes(scenes.filter(s => s.id !== id))
+  }
+
+  const updateSceneField = (id, field, value) => {
+    setScenes(scenes.map(s => s.id === id ? { ...s, [field]: value } : s))
+  }
+
   const sectionTabs = [
     { id: 'content', label: 'Edit', icon: Edit3 },
+    { id: 'storyboard', label: 'Storyboard', icon: Layout },
     { id: 'voice', label: 'Voice', icon: Radio },
     { id: 'video', label: 'Video', icon: Film },
   ]
+
+  const totalDuration = scenes.reduce((sum, s) => sum + (s.duration || 5), 0)
+  const activeScenes = scenes.filter(s => s.type !== 'closing')
 
   return (
     <div className="bg-gradient-to-br from-gray-900 via-gray-950 to-black rounded-2xl border border-white/10 overflow-hidden shadow-2xl">
@@ -162,17 +196,17 @@ export default function AdEditor({ content: initialContent, platform, images, on
             <Sparkles className="w-4 h-4 text-white" />
           </div>
           <div>
-            <h2 className="text-sm font-bold text-white tracking-wide">AD EDITOR</h2>
-            <p className="text-xs text-gray-500">Customize your professional advertisement</p>
+            <h2 className="text-sm font-bold text-white tracking-wide">VIDEO STUDIO</h2>
+            <p className="text-xs text-gray-500">{scenes.length} scenes | {totalDuration}s total</p>
           </div>
         </div>
         <Button size="sm" onClick={onClose} variant="ghost" className="text-white border border-white/20">Close</Button>
       </div>
 
-      <div className="flex gap-1 px-4 py-3 bg-white/5 border-b border-white/5">
+      <div className="flex gap-1 px-4 py-3 bg-white/5 border-b border-white/5 overflow-x-auto">
         {sectionTabs.map(tab => (
           <button key={tab.id} onClick={() => setActiveSection(tab.id)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-medium transition-all ${activeSection === tab.id ? 'bg-white/10 text-amber-400 shadow-sm' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}>
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${activeSection === tab.id ? 'bg-white/10 text-amber-400 shadow-sm' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}>
             <tab.icon className="w-3.5 h-3.5" />
             {tab.label}
           </button>
@@ -182,19 +216,13 @@ export default function AdEditor({ content: initialContent, platform, images, on
       <div className="p-6">
         {activeSection === 'content' && (
           <div className="space-y-3">
-            <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Advertisement Script</label>
-            <textarea value={content} onChange={(e) => setContent(e.target.value)}
-              className="w-full h-40 rounded-xl bg-white/5 border border-white/10 text-white text-sm p-4 resize-none focus:outline-none focus:border-amber-500/40 focus:ring-1 focus:ring-amber-500/20"
-              placeholder="Your ad content..." />
             <div className="flex items-center justify-between">
-              <p className="text-xs text-gray-500">{content.split(' ').length} words | 4 statements max</p>
-              <div className="flex items-center gap-2">
-                <button type="button" onClick={() => setShowEmojis(!showEmojis)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-all ${showEmojis ? 'bg-amber-500/20 text-amber-400' : 'bg-white/5 text-gray-400'}`}>
-                  <Smile className="w-3 h-3" /> Emojis
-                </button>
-              </div>
+              <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Voiceover Script</label>
+              <span className="text-[10px] text-gray-500">{content.split(' ').length} words | {activeScenes.length} scenes</span>
             </div>
+            <textarea value={content} onChange={(e) => setContent(e.target.value)}
+              className="w-full h-36 rounded-xl bg-white/5 border border-white/10 text-white text-sm p-4 resize-none focus:outline-none focus:border-amber-500/40 focus:ring-1 focus:ring-amber-500/20"
+              placeholder="Your ad voiceover content..." />
 
             {currentCaption && (
               <div className="p-3 bg-black/60 rounded-xl border border-white/10">
@@ -215,6 +243,63 @@ export default function AdEditor({ content: initialContent, platform, images, on
                 <p className="text-xs text-amber-400">{voiceProfiles.find(v => v.id === selectedVoice)?.name}</p>
               </div>
               <Volume2 className="w-5 h-5 text-amber-500" />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Smile className="w-3 h-3 text-gray-500" />
+              <button type="button" onClick={() => setShowEmojis(!showEmojis)}
+                className={`text-xs px-2 py-1 rounded transition-all ${showEmojis ? 'bg-amber-500/20 text-amber-400' : 'bg-white/5 text-gray-400'}`}>
+                Emojis {showEmojis ? 'ON' : 'OFF'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {activeSection === 'storyboard' && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Layout className="w-4 h-4 text-amber-500" />
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Storyboard ({scenes.length} scenes)</p>
+              </div>
+              <span className="text-xs text-gray-500">{totalDuration}s total</span>
+            </div>
+
+            {scenes.length === 0 ? (
+              <div className="text-center py-12 text-gray-500">
+                <p className="text-sm">No scenes yet. Generate a script first.</p>
+              </div>
+            ) : (
+              <div className="grid gap-3">
+                {scenes.map((scene, index) => (
+                  <StoryboardView
+                    key={scene.id}
+                    scene={scene}
+                    index={index}
+                    total={scenes.length}
+                    isSelected={selectedSceneId === scene.id}
+                    isEditing={editingSceneId === scene.id}
+                    onSelect={() => setSelectedSceneId(scene.id === selectedSceneId ? null : scene.id)}
+                    onEdit={() => setEditingSceneId(editingSceneId === scene.id ? null : scene.id)}
+                    onMoveUp={() => moveScene(index, -1)}
+                    onMoveDown={() => moveScene(index, 1)}
+                    onRemove={() => removeScene(scene.id)}
+                    onUpdateField={(field, value) => updateSceneField(scene.id, field, value)}
+                  />
+                ))}
+              </div>
+            )}
+
+            <div className="flex justify-between items-center pt-2 border-t border-white/5">
+              <p className="text-[10px] text-gray-500">Drag scenes or use arrows to reorder. Click a scene to edit its details.</p>
+              <div className="flex gap-2">
+                {script && (
+                  <Button size="sm" variant="ghost" className="text-white border border-white/20"
+                    onClick={() => setActiveSection('video')}>
+                    <Film className="w-3.5 h-3.5 mr-1.5" /> Generate Video
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
         )}
@@ -319,16 +404,21 @@ export default function AdEditor({ content: initialContent, platform, images, on
               <div className="space-y-4">
                 <div className="flex items-center gap-2 mb-1">
                   <Film className="w-4 h-4 text-purple-500" />
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Video Ad (30s)</p>
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Video ({totalDuration}s | {scenes.length} scenes)</p>
                 </div>
-                <div className="grid grid-cols-3 gap-2 mb-4">
+
+                <div className="grid grid-cols-4 gap-2 mb-4">
                   <div className="p-3 bg-white/5 rounded-xl text-center">
                     <p className="text-[10px] text-purple-300">Duration</p>
-                    <p className="text-sm font-bold text-white">30s</p>
+                    <p className="text-sm font-bold text-white">{totalDuration}s</p>
+                  </div>
+                  <div className="p-3 bg-white/5 rounded-xl text-center">
+                    <p className="text-[10px] text-purple-300">Scenes</p>
+                    <p className="text-sm font-bold text-white">{scenes.length}</p>
                   </div>
                   <div className="p-3 bg-white/5 rounded-xl text-center">
                     <p className="text-[10px] text-purple-300">Quality</p>
-                    <p className="text-sm font-bold text-white">HD</p>
+                    <p className="text-sm font-bold text-white">60fps HD</p>
                   </div>
                   <div className="p-3 bg-white/5 rounded-xl text-center">
                     <p className="text-[10px] text-purple-300">Theme</p>
@@ -337,13 +427,13 @@ export default function AdEditor({ content: initialContent, platform, images, on
                 </div>
 
                 <p className="text-xs text-gray-500 mb-4 leading-relaxed">
-                  Each generation picks from 15 unique color themes with random motion. Click <strong className="text-amber-400">Generate</strong> now, or <strong className="text-amber-400">Generate New</strong> later for a different look.
+                  Each render picks from 15 unique color themes. Your {scenes.length}-scene storyboard will be compiled into a {totalDuration}-second video ad.
                 </p>
 
                 {isGeneratingVideo && (
                   <div className="mb-4">
                     <div className="flex justify-between text-xs text-purple-300 mb-1">
-                      <span>Rendering...</span>
+                      <span>Rendering {scenes.length} scenes...</span>
                       <span>{videoProgress}%</span>
                     </div>
                     <div className="w-full bg-white/10 rounded-full h-2">
@@ -354,7 +444,7 @@ export default function AdEditor({ content: initialContent, platform, images, on
 
                 <Button onClick={renderVideo} disabled={isGeneratingVideo}
                   className="w-full bg-gradient-to-r from-purple-600 to-pink-600">
-                  {isGeneratingVideo ? <><RefreshCw className="w-4 h-4 mr-2 animate-spin" /> Creating...</> : <><Film className="w-4 h-4 mr-2" /> Generate Video</>}
+                  {isGeneratingVideo ? <><RefreshCw className="w-4 h-4 mr-2 animate-spin" /> Rendering...</> : <><Film className="w-4 h-4 mr-2" /> Generate Video</>}
                 </Button>
               </div>
             ) : (
@@ -372,7 +462,7 @@ export default function AdEditor({ content: initialContent, platform, images, on
                 <div className="w-full lg:w-64 shrink-0 space-y-3">
                   <div className="flex items-center gap-2">
                     <Film className="w-4 h-4 text-purple-500" />
-                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Video Ad (30s)</p>
+                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Playback</p>
                   </div>
 
                   {currentCaption && (
@@ -393,11 +483,24 @@ export default function AdEditor({ content: initialContent, platform, images, on
 
                   <div className="bg-white/5 rounded-lg p-3 space-y-2">
                     <p className="text-[10px] text-gray-500 uppercase tracking-wider">Info</p>
-                    <div className="flex justify-between text-xs"><span className="text-gray-400">Duration</span><span className="text-white font-medium">30s</span></div>
+                    <div className="flex justify-between text-xs"><span className="text-gray-400">Duration</span><span className="text-white font-medium">{totalDuration}s</span></div>
+                    <div className="flex justify-between text-xs"><span className="text-gray-400">Scenes</span><span className="text-white font-medium">{scenes.length}</span></div>
                     <div className="flex justify-between text-xs"><span className="text-gray-400">FPS</span><span className="text-white font-medium">60</span></div>
-                    <div className="flex justify-between text-xs"><span className="text-gray-400">Quality</span><span className="text-white font-medium">HD</span></div>
-                    <div className="flex justify-between text-xs"><span className="text-gray-400">Theme</span><span className="text-amber-400 font-medium">Random</span></div>
                     <div className="flex justify-between text-xs"><span className="text-gray-400">Bitrate</span><span className="text-white font-medium">12 Mbps</span></div>
+                  </div>
+
+                  <div className="bg-white/5 rounded-lg p-3">
+                    <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-2">Scenes</p>
+                    <div className="space-y-1 max-h-32 overflow-y-auto">
+                      {scenes.map((s, i) => (
+                        <div key={s.id} className="flex items-center gap-2 text-[10px]">
+                          <span className="w-4 h-4 rounded bg-white/10 flex items-center justify-center text-white/60 font-mono">{i + 1}</span>
+                          <span className={`${i === scenes.indexOf(scenes.find(ss => ss.narration === currentCaption || ss.onScreenText === currentCaption)) ? 'text-amber-400' : 'text-gray-400'}`}>
+                            {s.type} ({s.duration}s)
+                          </span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
               </div>

@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react'
 import { useForm } from 'react-hook-form'
-import { Wand2, Sparkles, RefreshCw, FileText, Image as ImageIcon } from 'lucide-react'
+import { Wand2, Sparkles, RefreshCw, FileText, Image as ImageIcon, Clapperboard } from 'lucide-react'
 import Button from '../ui/Button'
 import Select from '../ui/Select'
 import Input from '../ui/Input'
@@ -9,6 +9,7 @@ import FileUpload from '../ui/FileUpload'
 import AdEditor from './AdEditor'
 import { useToast } from '../../contexts/ToastContext'
 import { streamAI } from '../../lib/api'
+import { generateScript, createEmptyScript, generateVoiceoverScript } from '../../lib/scriptWriter'
 
 const businessTypes = [
   { value: 'restaurant', label: 'Restaurant' },
@@ -85,8 +86,17 @@ const languages = [
 
 const MAX_STATEMENTS = 4
 
+const videoTypes = [
+  { value: 'commercial', label: 'Commercial Ad' },
+  { value: 'social', label: 'Social Media' },
+  { value: 'explainer', label: 'Explainer Video' },
+  { value: 'educational', label: 'Educational' },
+  { value: 'testimonial', label: 'Testimonial' },
+]
+
 export default function GeneratorForm() {
   const [generatedContent, setGeneratedContent] = useState('')
+  const [generatedScript, setGeneratedScript] = useState(null)
   const [isGenerating, setIsGenerating] = useState(false)
   const [uploadedFiles, setUploadedFiles] = useState([])
   const [activeTab, setActiveTab] = useState('content')
@@ -98,6 +108,7 @@ export default function GeneratorForm() {
       businessType: '', platform: '', tone: 'professional',
       goal: 'engagement', audience: 'everyone', length: 'medium',
       language: 'english', topic: '', keywords: '', additionalInfo: '',
+      videoType: 'commercial',
     }
   })
 
@@ -106,31 +117,46 @@ export default function GeneratorForm() {
   const onGenerate = async (data) => {
     setIsGenerating(true)
     setGeneratedContent('')
+    setGeneratedScript(null)
     setShowEditor(false)
 
     try {
-      const prompt = `Generate a ${data.tone} advertisement for ${data.businessType} on ${data.platform}.
-Topic: ${data.topic}
-Keywords: ${data.keywords || 'none'}
-Goal: ${data.goal} — ${data.goal === 'sales' ? 'drive purchases' : data.goal === 'engagement' ? 'spark conversation' : data.goal === 'awareness' ? 'build recognition' : data.goal === 'lead-generation' ? 'generate leads' : data.goal === 'website-traffic' ? 'drive traffic' : 'grow the brand'}
-Audience: ${data.audience}
-Language: ${data.language}
-Tone: ${data.tone}
-
-CRITICAL RULES — YOU MUST FOLLOW EVERY RULE:
-1. Write EXACTLY ${MAX_STATEMENTS} short, punchy statements (no more, no less).
-2. Each statement must be ONE short, catchy sentence — maximum 15 words each.
-3. Every statement must match the "${data.tone}" tone and speak directly to "${data.audience}" audience.
-4. Every statement must serve the goal "${data.goal}" — each line must help achieve this goal.
-5. Structure: Hook → Problem → Solution → Call-to-Action.
-6. Total must fit in a 30-second voiceover (keep it tight).
-7. Do NOT use hashtags, markdown, section headers, or emojis unless the tone is "funny" or "youthful".
-8. Write in ${data.language}.`
-
-      await streamAI('/ai/generate', { ...data, systemPrompt: prompt, maxStatements: MAX_STATEMENTS }, (chunk) => {
-        setGeneratedContent(prev => prev + chunk)
+      const scriptData = { ...data, maxStatements: MAX_STATEMENTS }
+      let fullContent = ''
+      await generateScript(scriptData, (chunk) => {
+        fullContent += chunk
       })
-      addToast('Content generated! Opening editor...', 'success')
+      // Try to parse the final JSON as a structured script
+      let script = null
+      try {
+        const cleaned = fullContent.replace(/^data:\s*\{/, '{').replace(/\}\s*data:\s*\[DONE\]/, '}')
+        const lines = fullContent.split('\n')
+        let jsonPart = ''
+        for (const line of lines) {
+          if (line.startsWith('data: ') && !line.includes('[DONE]')) {
+            try {
+              const parsed = JSON.parse(line.slice(6))
+              if (parsed.script) {
+                script = parsed.script
+                break
+              }
+            } catch (e) { jsonPart += line }
+          }
+        }
+      } catch (e) { /* fallback */ }
+
+      if (!script) {
+        script = createEmptyScript({ ...data })
+      }
+
+      setGeneratedScript(script)
+      const voiceText = script.scenes
+        .filter(s => s.type !== 'closing')
+        .map(s => s.narration)
+        .join('. ')
+
+      setGeneratedContent(voiceText || script.scenes.map(s => s.onScreenText).join('. '))
+      addToast('Script generated! Opening studio...', 'success')
     } catch (error) {
       addToast(error.message || 'Failed to generate', 'error')
       setIsGenerating(false)
@@ -188,6 +214,10 @@ CRITICAL RULES — YOU MUST FOLLOW EVERY RULE:
               <Select label="Language" options={languages} {...register('language')} />
             </div>
 
+            <div className="grid sm:grid-cols-2 gap-4">
+              <Select label="Video Type" options={videoTypes} {...register('videoType')} />
+            </div>
+
             <Input label="Topic / Product Name" placeholder="e.g., Nano Banana organic fruit snacks" error={errors.topic?.message} {...register('topic', { required: 'Required' })} />
             <Input label="Keywords (optional)" placeholder="e.g., organic, healthy, natural" {...register('keywords')} />
             <Input label="Additional Info (optional)" placeholder="Any special details..." {...register('additionalInfo')} />
@@ -201,14 +231,14 @@ CRITICAL RULES — YOU MUST FOLLOW EVERY RULE:
 
             <Button type="submit" className="w-full" size="lg" disabled={isGenerating}>
               {isGenerating ? (
-                <><RefreshCw className="w-5 h-5 mr-2 animate-spin" /> Generating {MAX_STATEMENTS} statements...</>
+                <><RefreshCw className="w-5 h-5 mr-2 animate-spin" /> Writing script & storyboard...</>
               ) : (
-                <><Sparkles className="w-5 h-5 mr-2" /> Generate Advertisement</>
+                <><Clapperboard className="w-5 h-5 mr-2" /> Generate Video Script</>
               )}
             </Button>
 
             <p className="text-center text-[10px] text-secondary-400">
-              AI generates exactly {MAX_STATEMENTS} persuasive statements for your 30-second ad
+              AI builds a complete scene-by-scene script with narration, visuals, and timing
             </p>
           </form>
         </Card>
@@ -219,6 +249,7 @@ CRITICAL RULES — YOU MUST FOLLOW EVERY RULE:
         <div className="max-w-6xl mx-auto animate-fade-in">
           <AdEditor
             content={generatedContent}
+            script={generatedScript}
             platform={watchedPlatform}
             images={uploadedFiles}
             onClose={() => setShowEditor(false)}
