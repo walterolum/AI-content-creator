@@ -1,28 +1,28 @@
-const EMOJI_MAP = {
-  'rocket': '🚀', 'fire': '🔥', 'star': '⭐', 'sparkle': '✨',
-  'money': '💰', 'target': '🎯', 'chart': '📈', 'lightbulb': '💡',
-  'check': '✅', 'crown': '👑', 'diamond': '💎', 'trophy': '🏆',
-  'medal': '🏅', 'gem': '💎', 'thumbsup': '👍', 'clap': '👏',
-  'heart': '❤️', 'zap': '⚡', 'boom': '💥', 'globe': '🌍',
-  'phone': '📱', 'shop': '🛒', 'deal': '🤝', 'growth': '📊',
-  'idea': '💡', 'team': '👥', 'time': '⏰', 'secure': '🔒',
-  'fast': '⚡', 'smart': '🧠', 'premium': '💎', 'best': '🏆',
-  'new': '🆕', 'hot': '🔥', 'sale': '🏷️', 'offer': '🎁',
-  'free': '🆓', 'pro': '⭐', 'trust': '🤝', 'guaranteed': '✅',
-}
+const THEMES = [
+  { name: 'midnight', bg1: '#0f0c29', bg2: '#302b63', bg3: '#24243e', accent: '#a855f7', text: '#ffffff', glow: '#c084fc', caption: '#1e1b4b' },
+  { name: 'coral', bg1: '#0d0d0d', bg2: '#1a1a2e', bg3: '#16213e', accent: '#f97316', text: '#ffffff', glow: '#fb923c', caption: '#1c1917' },
+  { name: 'emerald', bg1: '#0a0a0a', bg2: '#0f172a', bg3: '#1e293b', accent: '#22c55e', text: '#ffffff', glow: '#4ade80', caption: '#052e16' },
+  { name: 'sapphire', bg1: '#000814', bg2: '#001d3d', bg3: '#003566', accent: '#38bdf8', text: '#ffffff', glow: '#7dd3fc', caption: '#0c4a6e' },
+  { name: 'rose', bg1: '#1a0a0a', bg2: '#2d1520', bg3: '#3d1a2e', accent: '#e11d48', text: '#ffffff', glow: '#fb7185', caption: '#2d0a1e' },
+  { name: 'slate', bg1: '#020617', bg2: '#0f172a', bg3: '#1e293b', accent: '#94a3b8', text: '#ffffff', glow: '#cbd5e1', caption: '#0f172a' },
+  { name: 'amber', bg1: '#0a0800', bg2: '#1a1500', bg3: '#2a2000', accent: '#f59e0b', text: '#ffffff', glow: '#fbbf24', caption: '#1c1300' },
+  { name: 'teal', bg1: '#000a0a', bg2: '#001414', bg3: '#002222', accent: '#14b8a6', text: '#ffffff', glow: '#5eead4', caption: '#002020' },
+  { name: 'violet', bg1: '#0a0015', bg2: '#150028', bg3: '#22003d', accent: '#8b5cf6', text: '#ffffff', glow: '#a78bfa', caption: '#1a0030' },
+  { name: 'warm', bg1: '#0d0805', bg2: '#1a1210', bg3: '#2a1a15', accent: '#d97706', text: '#ffffff', glow: '#f59e0b', caption: '#1a0e08' },
+  { name: 'ocean', bg1: '#000d1a', bg2: '#001a33', bg3: '#00264d', accent: '#06b6d4', text: '#ffffff', glow: '#67e8f9', caption: '#00334d' },
+  { name: 'graphite', bg1: '#050505', bg2: '#0d0d0d', bg3: '#1a1a1a', accent: '#e5e5e5', text: '#ffffff', glow: '#ffffff', caption: '#141414' },
+  { name: 'sunset', bg1: '#0d0500', bg2: '#1d0a02', bg3: '#2d1005', accent: '#f43f5e', text: '#ffffff', glow: '#fb7185', caption: '#200500' },
+  { name: 'forest', bg1: '#000a00', bg2: '#001a00', bg3: '#003000', accent: '#84cc16', text: '#ffffff', glow: '#a3e635', caption: '#002000' },
+  { name: 'platinum', bg1: '#0a0a0a', bg2: '#1a1a1a', bg3: '#2a2a2a', accent: '#d4d4d4', text: '#ffffff', glow: '#e5e5e5', caption: '#1a1a1a' },
+]
 
-function replaceEmojiPlaceholders(text) {
-  let result = text
-  for (const [key, emoji] of Object.entries(EMOJI_MAP)) {
-    const regex = new RegExp(`:${key}:`, 'gi')
-    result = result.replace(regex, emoji)
-  }
-  if (text.includes('## Emoji')) {
-    const bizEmojis = ['✨', '🔥', '💎', '🚀', '⭐', '💡', '🏆', '✅', '👑', '💯']
-    const randomEmojis = Array.from({ length: 3 }, () => bizEmojis[Math.floor(Math.random() * bizEmojis.length)])
-    result += ' ' + randomEmojis.join(' ')
-  }
-  return result
+let lastThemeIndex = -1
+
+function pickTheme() {
+  let idx
+  do { idx = Math.floor(Math.random() * THEMES.length) } while (idx === lastThemeIndex && THEMES.length > 1)
+  lastThemeIndex = idx
+  return THEMES[idx]
 }
 
 function cleanTextForVoice(text) {
@@ -40,17 +40,8 @@ export function generateVoiceoverScript(content) {
 
 function extractKeywords(text) {
   const words = text.toLowerCase().split(/\s+/)
-  const stopWords = new Set(['the', 'a', 'an', 'is', 'are', 'was', 'were', 'be', 'been',
-    'being', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could',
-    'should', 'may', 'might', 'shall', 'can', 'need', 'dare', 'ought', 'used',
-    'to', 'of', 'in', 'for', 'on', 'with', 'at', 'by', 'from', 'as', 'into',
-    'through', 'during', 'before', 'after', 'above', 'below', 'between',
-    'and', 'but', 'or', 'nor', 'not', 'so', 'yet', 'both', 'either', 'neither',
-    'this', 'that', 'these', 'those', 'i', 'me', 'my', 'we', 'our', 'you', 'your',
-    'it', 'its', 'they', 'them', 'their', 'he', 'him', 'his', 'she', 'her',
-    'what', 'which', 'who', 'whom', 'whose', 'when', 'where', 'why', 'how'])
-  const unique = [...new Set(words.filter(w => w.length > 3 && !stopWords.has(w)))]
-  return unique.slice(0, 5)
+  const stopWords = new Set(['the','a','an','is','are','was','were','be','been','being','have','has','had','do','does','did','will','would','could','should','may','might','shall','can','need','dare','ought','used','to','of','in','for','on','with','at','by','from','as','into','through','during','before','after','above','below','between','and','but','or','nor','not','so','yet','both','either','neither','this','that','these','those','i','me','my','we','our','you','your','it','its','they','them','their','he','him','his','she','her','what','which','who','whom','whose','when','where','why','how'])
+  return [...new Set(words.filter(w => w.length > 3 && !stopWords.has(w)))].slice(0, 5)
 }
 
 function parseContentToScenes(text) {
@@ -58,70 +49,18 @@ function parseContentToScenes(text) {
   const sentences = cleaned.split(/[.!?]+/).filter(s => s.trim().length > 8)
   const keywords = extractKeywords(text)
   const productName = keywords[0] || 'Your Brand'
-
   const scenes = []
 
   if (sentences.length >= 3) {
-    scenes.push({
-      id: 'intro', type: 'intro',
-      title: productName.toUpperCase(),
-      subtitle: sentences[0].trim() + '.',
-      text: sentences[0].trim() + '.',
-      voiceText: sentences[0].trim() + '.',
-      duration: 7000, startTime: 0, transition: 'crossfade', emoji: '🚀', keywords,
-    })
-    scenes.push({
-      id: 'problem', type: 'problem',
-      title: 'The Challenge',
-      text: sentences.slice(1, 3).join('. ').trim() + '.',
-      voiceText: sentences.slice(1, 3).join('. ').trim() + '.',
-      duration: 8000, startTime: 7000, transition: 'crossfade', emoji: '💡', keywords,
-    })
-    scenes.push({
-      id: 'solution', type: 'solution',
-      title: productName.charAt(0).toUpperCase() + productName.slice(1),
-      text: sentences.slice(2, 4).join('. ').trim() + '.',
-      voiceText: sentences.slice(2, 4).join('. ').trim() + '.',
-      duration: 9000, startTime: 15000, transition: 'crossfade', emoji: '🔥', keywords,
-    })
-    scenes.push({
-      id: 'cta', type: 'cta',
-      title: 'Act Now',
-      subtitle: sentences[4] ? sentences[4].trim() + '.' : 'Don\'t miss out!',
-      text: sentences[4] ? sentences[4].trim() + '.' : 'Don\'t miss out!',
-      voiceText: sentences[4] ? sentences[4].trim() + '.' : 'Don\'t miss out!',
-      duration: 7000, startTime: 24000, transition: 'crossfade', emoji: '🎯', keywords,
-    })
-    scenes.push({
-      id: 'outro', type: 'outro',
-      title: productName.toUpperCase(),
-      subtitle: 'Your Success Starts Here',
-      text: 'Your Success Starts Here',
-      voiceText: '',
-      duration: 2000, startTime: 28000, transition: 'crossfade', emoji: '👑', keywords,
-    })
+    scenes.push({ id: 'intro', type: 'intro', title: productName.toUpperCase(), subtitle: sentences[0].trim() + '.', text: sentences[0].trim() + '.', voiceText: sentences[0].trim() + '.', duration: 7000, startTime: 0, keywords })
+    scenes.push({ id: 'problem', type: 'problem', title: 'The Challenge', text: sentences.slice(1, 3).join('. ').trim() + '.', voiceText: sentences.slice(1, 3).join('. ').trim() + '.', duration: 8000, startTime: 7000, keywords })
+    scenes.push({ id: 'solution', type: 'solution', title: productName.charAt(0).toUpperCase() + productName.slice(1), text: sentences.slice(2, 4).join('. ').trim() + '.', voiceText: sentences.slice(2, 4).join('. ').trim() + '.', duration: 9000, startTime: 15000, keywords })
+    scenes.push({ id: 'cta', type: 'cta', title: 'Act Now', subtitle: sentences[4] ? sentences[4].trim() + '.' : 'Don\'t miss out!', text: sentences[4] ? sentences[4].trim() + '.' : 'Don\'t miss out!', voiceText: sentences[4] ? sentences[4].trim() + '.' : 'Don\'t miss out!', duration: 7000, startTime: 24000, keywords })
+    scenes.push({ id: 'outro', type: 'outro', title: productName.toUpperCase(), subtitle: 'Your Success Starts Here', text: 'Your Success Starts Here', voiceText: '', duration: 2000, startTime: 28000, keywords })
   } else {
-    scenes.push({
-      id: 'intro', type: 'intro', title: productName.toUpperCase(),
-      subtitle: cleaned.substring(0, 60) || 'Welcome!',
-      text: cleaned.substring(0, 60) || 'Welcome!',
-      voiceText: cleaned.substring(0, 60) || 'Welcome!',
-      duration: 12000, startTime: 0, transition: 'crossfade', emoji: '🚀', keywords,
-    })
-    scenes.push({
-      id: 'cta', type: 'cta', title: 'Get Started',
-      subtitle: 'Don\'t miss out!',
-      text: 'Don\'t miss out!',
-      voiceText: 'Don\'t miss out!',
-      duration: 12000, startTime: 12000, transition: 'crossfade', emoji: '🔥', keywords,
-    })
-    scenes.push({
-      id: 'outro', type: 'outro', title: productName.toUpperCase(),
-      subtitle: 'Your Success Starts Here',
-      text: 'Your Success Starts Here',
-      voiceText: '',
-      duration: 6000, startTime: 24000, transition: 'crossfade', emoji: '💎', keywords,
-    })
+    scenes.push({ id: 'intro', type: 'intro', title: productName.toUpperCase(), subtitle: cleaned.substring(0, 60) || 'Welcome!', text: cleaned.substring(0, 60) || 'Welcome!', voiceText: cleaned.substring(0, 60) || 'Welcome!', duration: 12000, startTime: 0, keywords })
+    scenes.push({ id: 'cta', type: 'cta', title: 'Get Started', subtitle: 'Don\'t miss out!', text: 'Don\'t miss out!', voiceText: 'Don\'t miss out!', duration: 12000, startTime: 12000, keywords })
+    scenes.push({ id: 'outro', type: 'outro', title: productName.toUpperCase(), subtitle: 'Your Success Starts Here', text: 'Your Success Starts Here', voiceText: '', duration: 6000, startTime: 24000, keywords })
   }
   return scenes
 }
@@ -130,93 +69,63 @@ export function getScenesForContent(content) {
   return parseContentToScenes(content)
 }
 
-const palettes = {
-  instagram: { bg1: '#833AB4', bg2: '#C13584', bg3: '#E1306C', accent: '#FFD700', text: '#FFFFFF', glow: '#FF69B4', studio: '#2d1b3d' },
-  tiktok: { bg1: '#000000', bg2: '#00F2EA', bg3: '#FF0050', accent: '#00F2EA', text: '#FFFFFF', glow: '#FF0050', studio: '#111111' },
-  facebook: { bg1: '#1877F2', bg2: '#42B72A', bg3: '#F7B928', accent: '#FFFFFF', text: '#FFFFFF', glow: '#1877F2', studio: '#0d2b45' },
-  linkedin: { bg1: '#0077B5', bg2: '#00A0DC', bg3: '#5BA0D9', accent: '#FFFFFF', text: '#FFFFFF', glow: '#00A0DC', studio: '#032438' },
-  x: { bg1: '#1DA1F2', bg2: '#14171A', bg3: '#657786', accent: '#1DA1F2', text: '#FFFFFF', glow: '#1DA1F2', studio: '#0a0a0a' },
-  threads: { bg1: '#1A1A1A', bg2: '#333333', bg3: '#4A4A4A', accent: '#FFFFFF', text: '#FFFFFF', glow: '#FFFFFF', studio: '#141414' },
-}
-
-const sceneVisuals = {
-  intro: { shapes: ['circle', 'diamond'], particleCount: 25, hasIcon: true },
-  problem: { shapes: ['line'], particleCount: 18, hasIcon: false },
-  solution: { shapes: ['circle', 'star'], particleCount: 35, hasIcon: true },
-  cta: { shapes: ['circle', 'star'], particleCount: 45, hasIcon: true },
-  outro: { shapes: ['diamond'], particleCount: 12, hasIcon: true },
-}
-
-function drawEmoji(ctx, emoji, x, y, size) {
-  ctx.font = `${size}px "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif`
-  ctx.textAlign = 'center'; ctx.textBaseline = 'middle'
-  ctx.fillText(emoji, x, y)
-}
-
 export async function generateAdVideo(content, platform = 'instagram', options = {}) {
-  const { duration = 30000, width = 1080, height = 1920, fps = 30, images = [], showEmojis = true } = options
+  const { duration = 30000, width = 1080, height = 1920, fps = 30, images = [] } = options
 
+  const theme = pickTheme()
   const canvas = document.createElement('canvas')
   canvas.width = width; canvas.height = height
   const ctx = canvas.getContext('2d')
 
   const scenes = parseContentToScenes(content)
-  const palette = palettes[platform] || palettes.instagram
   const loadedImages = await loadImages(images)
+
+  const motionPhase = Math.random() * Math.PI * 2
+  const driftSpeed = 0.001 + Math.random() * 0.002
 
   const stream = canvas.captureStream(fps)
   const mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp9', videoBitsPerSecond: 8000000 })
-
   const chunks = []
   mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data) }
 
-  const videoBlob = await new Promise((resolve) => {
+  return new Promise((resolve) => {
     mediaRecorder.onstop = () => resolve(new Blob(chunks, { type: 'video/webm' }))
     mediaRecorder.start()
 
     const totalFrames = Math.floor((duration / 1000) * fps)
     let frame = 0
-    let prevSceneId = null
 
     const animate = () => {
       if (frame >= totalFrames) { mediaRecorder.stop(); return }
 
-      const currentTime = (frame / fps) * 1000
+      const t = frame / fps
+      const currentTime = t * 1000
       const progress = frame / totalFrames
       ctx.clearRect(0, 0, width, height)
 
       const currentScene = scenes.find(s => currentTime >= s.startTime && currentTime < s.startTime + s.duration) || scenes[0]
       const sceneProgress = (currentTime - currentScene.startTime) / currentScene.duration
-
       const sceneIndex = scenes.indexOf(currentScene)
       const nextScene = scenes[sceneIndex + 1]
 
-      let crossfadeAlpha = 1
-      let prevScene = null
-      if (prevSceneId && prevSceneId !== currentScene.id) {
-        prevScene = scenes.find(s => s.id === prevSceneId)
+      let fade = 1
+      if (nextScene && currentTime + 250 >= nextScene.startTime) {
+        fade = 1 - (currentTime - (nextScene.startTime - 250)) / 250
       }
-      if (nextScene && currentTime + 300 >= nextScene.startTime) {
-        crossfadeAlpha = 1 - (currentTime - (nextScene.startTime - 300)) / 300
-      }
-      if (prevScene && sceneProgress < 0.15) {
-        crossfadeAlpha = Math.min(1, sceneProgress / 0.15)
+      if (sceneProgress < 0.1) {
+        fade = Math.min(1, sceneProgress / 0.1)
       }
 
-      drawStudioBackground(ctx, width, height, frame, palette, currentScene)
-      drawSoftGlow(ctx, width, height, frame, palette)
-      drawParticles(ctx, width, height, frame, palette, currentScene)
-      drawSceneContent(ctx, width, height, currentScene, sceneProgress, palette, frame, loadedImages, showEmojis, crossfadeAlpha)
-      drawCaptionBar(ctx, width, height, currentScene, sceneProgress, palette)
-      drawProgressBar(ctx, width, height, progress, palette)
+      drawBackground(ctx, width, height, t, theme, motionPhase, driftSpeed)
+      drawSceneContent(ctx, width, height, currentScene, sceneProgress, theme, loadedImages, fade, t)
+      drawCaptionBar(ctx, width, height, currentScene, sceneProgress, theme)
+      drawProgressBar(ctx, width, height, progress, theme)
 
-      prevSceneId = currentScene.id
       frame++
       requestAnimationFrame(animate)
     }
     animate()
   })
-  return videoBlob
 }
 
 async function loadImages(images) {
@@ -246,294 +155,194 @@ function loadImage(src) {
   })
 }
 
-function drawStudioBackground(ctx, width, height, frame, palette, scene) {
-  const grad = ctx.createRadialGradient(width / 2, height * 0.4, 0, width / 2, height * 0.4, height * 0.9)
-  grad.addColorStop(0, palette.bg1)
-  grad.addColorStop(0.35, palette.bg2)
-  grad.addColorStop(0.6, palette.studio || '#1a1a2e')
-  grad.addColorStop(1, '#0a0a12')
+function drawBackground(ctx, width, height, t, theme, phase, drift) {
+  const cx = width / 2 + Math.sin(t * drift + phase) * 150
+  const cy = height * 0.35 + Math.cos(t * drift * 0.7 + phase) * 100
+  const grad = ctx.createRadialGradient(cx, cy, 0, width / 2, height / 2, height * 0.85)
+  grad.addColorStop(0, theme.bg1)
+  grad.addColorStop(0.3, theme.bg2)
+  grad.addColorStop(0.7, theme.bg3)
+  grad.addColorStop(1, '#000000')
   ctx.fillStyle = grad
   ctx.fillRect(0, 0, width, height)
 
-  const floorGrad = ctx.createLinearGradient(0, height * 0.82, 0, height)
-  floorGrad.addColorStop(0, 'rgba(0,0,0,0)')
-  floorGrad.addColorStop(0.3, 'rgba(0,0,0,0.15)')
-  floorGrad.addColorStop(1, 'rgba(0,0,0,0.35)')
-  ctx.fillStyle = floorGrad
-  ctx.fillRect(0, height * 0.82, width, height * 0.18)
-
-  const stageGrad = ctx.createRadialGradient(width / 2, height * 0.78, 50, width / 2, height * 0.78, width * 0.45)
-  stageGrad.addColorStop(0, 'rgba(255,255,255,0.06)')
-  stageGrad.addColorStop(0.5, 'rgba(255,255,255,0.02)')
-  stageGrad.addColorStop(1, 'rgba(0,0,0,0)')
-  ctx.fillStyle = stageGrad
-  ctx.beginPath()
-  ctx.ellipse(width / 2, height * 0.78, width * 0.45, 60, 0, 0, Math.PI * 2)
-  ctx.fill()
-
-  ctx.strokeStyle = 'rgba(255,255,255,0.025)'
-  ctx.lineWidth = 1
-  for (let i = 0; i < 8; i++) {
-    ctx.beginPath()
-    const baseY = (height / 8) * i
-    for (let x = 0; x <= width; x += 6) {
-      const y = baseY + Math.sin(x * 0.006 + frame * 0.01 + i * 0.7) * 10
-      if (x === 0) ctx.moveTo(x, y)
-      else ctx.lineTo(x, y)
-    }
-    ctx.stroke()
-  }
-
-  const visual = sceneVisuals[scene.type] || sceneVisuals.intro
-  const shapes = visual.shapes || []
-  ctx.strokeStyle = `rgba(255,255,255,0.03)`
-  ctx.lineWidth = 1
-  shapes.forEach((shape, si) => {
-    const sx = (Math.sin(si * 1.5 + frame * 0.0015) + 1) * width * 0.5
-    const sy = (Math.cos(si * 1.2 + frame * 0.002) + 1) * height * 0.5
-    const ssize = 100 + Math.sin(si + frame * 0.008) * 25
-    ctx.save()
-    ctx.translate(sx, sy)
-    ctx.rotate(frame * 0.004 + si)
-    if (shape === 'circle') { ctx.beginPath(); ctx.arc(0, 0, ssize / 2, 0, Math.PI * 2); ctx.stroke() }
-    else if (shape === 'diamond') { ctx.beginPath(); ctx.moveTo(0, -ssize / 2); ctx.lineTo(ssize / 2, 0); ctx.lineTo(0, ssize / 2); ctx.lineTo(-ssize / 2, 0); ctx.closePath(); ctx.stroke() }
-    else if (shape === 'line') { ctx.beginPath(); ctx.moveTo(-ssize / 2, 0); ctx.lineTo(ssize / 2, 0); ctx.stroke() }
-    else if (shape === 'star') { drawStar(ctx, 0, 0, 5, ssize / 2, ssize / 4); ctx.stroke() }
-    ctx.restore()
-  })
-}
-
-function drawSoftGlow(ctx, width, height, frame, palette) {
-  const glowX = width / 2 + Math.sin(frame * 0.002) * 300
-  const glowY = height * 0.3 + Math.cos(frame * 0.003) * 200
-  const glowGrad = ctx.createRadialGradient(glowX, glowY, 0, glowX, glowY, width * 0.55)
-  glowGrad.addColorStop(0, `rgba(255,255,255,0.04)`)
-  glowGrad.addColorStop(0.4, `rgba(255,255,255,0.015)`)
-  glowGrad.addColorStop(1, 'rgba(0,0,0,0)')
-  ctx.fillStyle = glowGrad
+  const lx = width * 0.3 + Math.sin(t * 0.3) * 100
+  const ly = height * 0.25 + Math.cos(t * 0.25) * 80
+  const lgrad = ctx.createRadialGradient(lx, ly, 0, lx, ly, height * 0.5)
+  lgrad.addColorStop(0, `rgba(255,255,255,0.03)`)
+  lgrad.addColorStop(0.5, `rgba(255,255,255,0.008)`)
+  lgrad.addColorStop(1, 'rgba(0,0,0,0)')
+  ctx.fillStyle = lgrad
   ctx.fillRect(0, 0, width, height)
 }
 
-function drawParticles(ctx, width, height, frame, palette, scene) {
-  const visual = sceneVisuals[scene.type] || sceneVisuals.intro
-  const count = visual.particleCount || 20
-  for (let i = 0; i < count; i++) {
-    const seed = i * 137.5
-    const x = (Math.sin(seed + frame * 0.002) + 1) * width / 2
-    const y = (Math.cos(seed * 1.3 + frame * 0.0015) + 1) * height / 2
-    const size = 2 + Math.sin(seed + frame * 0.008) * 1.5
-    const alpha = 0.06 + Math.sin(seed * 0.7 + frame * 0.004) * 0.04
-    ctx.beginPath()
-    ctx.arc(x, y, size, 0, Math.PI * 2)
-    ctx.fillStyle = `rgba(255,255,255,${alpha})`
-    ctx.fill()
-  }
-}
-
-function drawSceneContent(ctx, width, height, scene, progress, palette, frame, loadedImages, showEmojis, crossfadeAlpha) {
+function drawSceneContent(ctx, width, height, scene, progress, theme, loadedImages, fade, t) {
   ctx.save()
-  ctx.globalAlpha = crossfadeAlpha
-  const displayEmoji = showEmojis ? scene.emoji || '✨' : null
+  ctx.globalAlpha = fade
+
   switch (scene.type) {
-    case 'intro': drawIntroScene(ctx, width, height, scene, progress, palette, frame, displayEmoji, loadedImages); break
-    case 'problem': drawProblemScene(ctx, width, height, scene, progress, palette, frame, displayEmoji, loadedImages); break
-    case 'solution': drawSolutionScene(ctx, width, height, scene, progress, palette, frame, displayEmoji, loadedImages); break
-    case 'cta': drawCTAScene(ctx, width, height, scene, progress, palette, frame, displayEmoji, loadedImages); break
-    case 'outro': drawOutroScene(ctx, width, height, scene, progress, palette, frame, displayEmoji, loadedImages); break
+    case 'intro': drawIntroScene(ctx, width, height, scene, progress, theme, loadedImages, t); break
+    case 'problem': drawProblemScene(ctx, width, height, scene, progress, theme, loadedImages, t); break
+    case 'solution': drawSolutionScene(ctx, width, height, scene, progress, theme, loadedImages, t); break
+    case 'cta': drawCTAScene(ctx, width, height, scene, progress, theme, loadedImages, t); break
+    case 'outro': drawOutroScene(ctx, width, height, scene, progress, theme, loadedImages, t); break
   }
+
   ctx.restore()
 }
 
-function drawRoundedImage(ctx, img, x, y, w, h, radius, shadowColor, shadowBlur) {
-  ctx.save()
-  if (shadowBlur) {
-    ctx.shadowColor = shadowColor || 'rgba(0,0,0,0.3)'
-    ctx.shadowBlur = shadowBlur
-  }
-  ctx.beginPath()
-  ctx.roundRect(x, y, w, h, radius)
-  ctx.clip()
-  ctx.drawImage(img, x, y, w, h)
-  ctx.restore()
-}
-
-function drawIntroScene(ctx, width, height, scene, progress, palette, frame, emoji, loadedImages) {
-  const ease = easeOutCubic(Math.min(1, progress * 1.8))
-  const alpha = Math.min(1, progress * 2.2)
-  const yOffset = (1 - ease) * 100
-
-  if (emoji) {
-    const emojiSize = 70 + Math.sin(frame * 0.03) * 4
-    ctx.save()
-    ctx.globalAlpha = alpha * 0.25
-    ctx.shadowColor = palette.accent
-    ctx.shadowBlur = 30
-    drawEmoji(ctx, emoji, width / 2, height * 0.14 + yOffset * 0.4, emojiSize)
-    ctx.restore()
-  }
+function drawIntroScene(ctx, width, height, scene, progress, theme, loadedImages, t) {
+  const p = easeOutCubic(Math.min(1, progress * 1.6))
+  const alpha = Math.min(1, progress * 2)
+  const yOff = (1 - p) * 80
 
   ctx.save()
   ctx.globalAlpha = alpha
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
 
-  ctx.font = 'bold 56px "Helvetica Neue", Arial, sans-serif'
-  ctx.shadowColor = palette.accent
-  ctx.shadowBlur = 15
-  ctx.fillStyle = palette.accent
-  ctx.fillText(scene.title, width / 2, height * 0.26 + yOffset)
-
-  ctx.shadowBlur = 0
-  ctx.font = '44px "Helvetica Neue", Arial, sans-serif'
-  ctx.fillStyle = palette.text
-  const subtitleLines = wrapText(ctx, scene.subtitle, width * 0.82)
-  const lineHeight = 58
-  const startY = height * 0.40 - (subtitleLines.length * lineHeight) / 2 + yOffset * 0.4
-
-  subtitleLines.forEach((line, i) => {
-    const lineAlpha = Math.min(1, (progress * subtitleLines.length - i) * 1.4)
-    ctx.save()
-    ctx.globalAlpha = lineAlpha * alpha
-    ctx.fillText(line, width / 2, startY + i * lineHeight)
-    ctx.restore()
-  })
-
-  if (loadedImages.length > 0) {
-    const img = loadedImages[0].image
-    const imgSize = 140
-    const imgX = (width - imgSize) / 2
-    const imgY = height * 0.60 + yOffset * 0.3
-    const imgAlpha = Math.min(1, progress * 2)
-    ctx.save()
-    ctx.globalAlpha = imgAlpha
-    drawRoundedImage(ctx, img, imgX, imgY, imgSize, imgSize, 20, palette.glow, 25)
-    ctx.restore()
-  }
-  ctx.restore()
-}
-
-function drawProblemScene(ctx, width, height, scene, progress, palette, frame, emoji, loadedImages) {
-  const alpha = Math.min(1, progress * 1.5)
-  const slideX = (1 - easeOutCubic(Math.min(1, progress * 1.3))) * 180
-
-  ctx.save()
-  ctx.globalAlpha = alpha
-  ctx.textAlign = 'center'
-  ctx.textBaseline = 'middle'
-
-  ctx.font = 'bold 38px "Helvetica Neue", Arial, sans-serif'
-  ctx.shadowColor = 'rgba(255,150,50,0.2)'
-  ctx.shadowBlur = 8
-  ctx.fillStyle = '#FFD700'
-  ctx.fillText('◆  ' + scene.title + '  ◆', width / 2 - slideX * 0.3, height * 0.18)
-
-  ctx.shadowBlur = 0
-  const words = scene.text.split(' ')
-  const wordsToShow = Math.floor(words.length * Math.min(1, progress * 1.25))
-  const visibleText = words.slice(0, wordsToShow).join(' ')
-  const lines = wrapText(ctx, visibleText, width * 0.8)
-  const lineHeight = 54
-  const totalHeight = lines.length * lineHeight
-  const startY = height * 0.42 - totalHeight / 2 - slideX * 0.15
-
-  lines.forEach((line, i) => {
-    const lineAlpha = Math.min(1, (progress * lines.length - i) * 1.1)
-    ctx.save()
-    ctx.globalAlpha = lineAlpha * alpha
-    ctx.fillText(line, width / 2, startY + i * lineHeight)
-    ctx.restore()
-  })
-
-  if (loadedImages.length > 0) {
-    const img = loadedImages[0].image
-    const imgW = 180; const imgH = 180
-    const imgX = (width - imgW) / 2
-    const imgY = height * 0.68
-    const imgAlpha = Math.min(1, (progress - 0.15) * 2)
-    if (imgAlpha > 0) {
-      ctx.save()
-      ctx.globalAlpha = imgAlpha * alpha * 0.6
-      drawRoundedImage(ctx, img, imgX, imgY, imgW, imgH, 16, 'rgba(0,0,0,0.4)', 15)
-      ctx.restore()
-    }
-  }
-
-  if (emoji) {
-    ctx.save()
-    ctx.globalAlpha = 0.12 * alpha
-    drawEmoji(ctx, emoji, width * 0.85 + slideX, height * 0.22, 50)
-    ctx.restore()
-  }
-  ctx.restore()
-}
-
-function drawSolutionScene(ctx, width, height, scene, progress, palette, frame, emoji, loadedImages) {
-  const alpha = Math.min(1, progress * 1.3)
-  const scale = 0.6 + easeOutBack(Math.min(1, progress * 1.1)) * 0.4
-  const yOffset = (1 - easeOutCubic(Math.min(1, progress * 1.2))) * 60
-
-  ctx.save()
-  ctx.globalAlpha = alpha
-  ctx.textAlign = 'center'
-  ctx.textBaseline = 'middle'
-
-  ctx.font = 'bold 46px "Helvetica Neue", Arial, sans-serif'
-  ctx.shadowColor = palette.glow || palette.accent
+  ctx.font = 'bold 60px "Helvetica Neue", Arial, sans-serif'
+  ctx.shadowColor = theme.accent
   ctx.shadowBlur = 20
-  ctx.fillStyle = palette.accent
-  ctx.fillText(scene.title, width / 2, height * 0.18 + yOffset)
+  ctx.fillStyle = theme.accent
+  ctx.fillText(scene.title, width / 2, height * 0.26 + yOff)
 
   ctx.shadowBlur = 0
-  const words = scene.text.split(' ')
-  const wordsToShow = Math.floor(words.length * Math.min(1, progress * 1.15))
-  const visibleText = words.slice(0, wordsToShow).join(' ')
-  const lines = wrapText(ctx, visibleText, width * 0.78)
-  const lineHeight = 50
-  const totalHeight = lines.length * lineHeight
-  const startY = height * 0.38 - totalHeight / 2 + yOffset * 0.5
+  ctx.font = '42px "Helvetica Neue", Arial, sans-serif'
+  ctx.fillStyle = theme.text
 
-  lines.forEach((line, i) => {
-    const lineAlpha = Math.min(1, (progress * lines.length - i) * 1.1)
+  const subtitleLines = wrapText(ctx, scene.subtitle, width * 0.82)
+  const lineHeight = 56
+  const startY = height * 0.40 - (subtitleLines.length * lineHeight) / 2 + yOff * 0.5
+  subtitleLines.forEach((line, i) => {
+    const la = Math.min(1, (progress * subtitleLines.length - i) * 1.3)
     ctx.save()
-    ctx.globalAlpha = lineAlpha * alpha
-    ctx.translate(width / 2, startY + i * lineHeight)
-    ctx.fillText(line, 0, 0)
+    ctx.globalAlpha = la * alpha
+    ctx.fillText(line, width / 2, startY + i * lineHeight)
     ctx.restore()
   })
 
   if (loadedImages.length > 0) {
     const img = loadedImages[0].image
-    const imgW = 220; const imgH = 220
-    const imgX = (width - imgW) / 2
-    const imgY = height * 0.68 + yOffset * 0.3
-    const imgAlpha = Math.min(1, (progress - 0.2) * 2.5)
-    if (imgAlpha > 0) {
-      ctx.save()
-      ctx.globalAlpha = imgAlpha * alpha
-      ctx.shadowColor = palette.glow || palette.accent
-      ctx.shadowBlur = 30
-      ctx.shadowOffsetY = 8
-      drawRoundedImage(ctx, img, imgX, imgY, imgW, imgH, 22, palette.glow, 25)
-      ctx.restore()
-    }
-  }
-
-  if (emoji && !loadedImages.length) {
-    const emojiSize = 45 + Math.sin(frame * 0.025) * 4
+    const s = 150; const x = (width - s) / 2
+    const y = height * 0.62 + yOff * 0.3
+    const ia = Math.min(1, progress * 2)
     ctx.save()
-    ctx.globalAlpha = 0.18 * alpha
-    ctx.translate(width * 0.78, height * 0.72 + yOffset * 0.3)
-    ctx.scale(scale, scale)
-    drawEmoji(ctx, emoji, 0, 0, emojiSize)
+    ctx.globalAlpha = ia
+    ctx.shadowColor = 'rgba(0,0,0,0.4)'
+    ctx.shadowBlur = 20
+    ctx.shadowOffsetY = 5
+    ctx.beginPath(); ctx.roundRect(x, y, s, s, 18); ctx.clip()
+    ctx.drawImage(img, x, y, s, s)
     ctx.restore()
   }
   ctx.restore()
 }
 
-function drawCTAScene(ctx, width, height, scene, progress, palette, frame, emoji, loadedImages) {
-  const pulse = 1 + Math.sin(frame * 0.05) * 0.015
-  const alpha = Math.min(1, progress * 2.2)
-  const glowPulse = 12 + Math.sin(frame * 0.07) * 8
+function drawProblemScene(ctx, width, height, scene, progress, theme, loadedImages, t) {
+  const alpha = Math.min(1, progress * 1.4)
+  const slide = (1 - easeOutCubic(Math.min(1, progress * 1.2))) * 150
+
+  ctx.save()
+  ctx.globalAlpha = alpha
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+
+  ctx.font = 'bold 36px "Helvetica Neue", Arial, sans-serif'
+  ctx.shadowColor = 'rgba(255,180,50,0.15)'
+  ctx.shadowBlur = 6
+  ctx.fillStyle = theme.accent
+  ctx.fillText(scene.title, width / 2 - slide * 0.3, height * 0.18)
+
+  ctx.shadowBlur = 0
+  const words = scene.text.split(' ')
+  const wc = Math.floor(words.length * Math.min(1, progress * 1.2))
+  const vt = words.slice(0, wc).join(' ')
+  const lines = wrapText(ctx, vt, width * 0.8)
+  const lineHeight = 52
+  const startY = height * 0.40 - (lines.length * lineHeight) / 2 - slide * 0.1
+
+  lines.forEach((line, i) => {
+    const la = Math.min(1, (progress * lines.length - i) * 1.0)
+    ctx.save()
+    ctx.globalAlpha = la * alpha
+    ctx.fillStyle = theme.text
+    ctx.fillText(line, width / 2, startY + i * lineHeight)
+    ctx.restore()
+  })
+
+  if (loadedImages.length > 0) {
+    const img = loadedImages[0].image
+    const s = 160; const x = (width - s) / 2; const y = height * 0.66
+    const ia = Math.min(1, (progress - 0.15) * 2)
+    if (ia > 0) {
+      ctx.save()
+      ctx.globalAlpha = ia * alpha * 0.5
+      ctx.shadowColor = 'rgba(0,0,0,0.3)'
+      ctx.shadowBlur = 12
+      ctx.beginPath(); ctx.roundRect(x, y, s, s, 14); ctx.clip()
+      ctx.drawImage(img, x, y, s, s)
+      ctx.restore()
+    }
+  }
+  ctx.restore()
+}
+
+function drawSolutionScene(ctx, width, height, scene, progress, theme, loadedImages, t) {
+  const alpha = Math.min(1, progress * 1.2)
+  const yOff = (1 - easeOutCubic(Math.min(1, progress * 1.1))) * 50
+
+  ctx.save()
+  ctx.globalAlpha = alpha
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+
+  ctx.font = 'bold 48px "Helvetica Neue", Arial, sans-serif'
+  ctx.shadowColor = theme.glow
+  ctx.shadowBlur = 18
+  ctx.fillStyle = theme.accent
+  ctx.fillText(scene.title, width / 2, height * 0.18 + yOff)
+
+  ctx.shadowBlur = 0
+  const words = scene.text.split(' ')
+  const wc = Math.floor(words.length * Math.min(1, progress * 1.1))
+  const vt = words.slice(0, wc).join(' ')
+  const lines = wrapText(ctx, vt, width * 0.78)
+  const lineHeight = 50
+  const startY = height * 0.36 - (lines.length * lineHeight) / 2 + yOff * 0.5
+
+  lines.forEach((line, i) => {
+    const la = Math.min(1, (progress * lines.length - i) * 1.0)
+    ctx.save()
+    ctx.globalAlpha = la * alpha
+    ctx.fillStyle = theme.text
+    ctx.fillText(line, width / 2, startY + i * lineHeight)
+    ctx.restore()
+  })
+
+  if (loadedImages.length > 0) {
+    const img = loadedImages[0].image
+    const s = 200; const x = (width - s) / 2
+    const y = height * 0.66 + yOff * 0.3
+    const ia = Math.min(1, (progress - 0.2) * 2.5)
+    if (ia > 0) {
+      ctx.save()
+      ctx.globalAlpha = ia * alpha
+      ctx.shadowColor = 'rgba(0,0,0,0.4)'
+      ctx.shadowBlur = 25
+      ctx.shadowOffsetY = 6
+      ctx.beginPath(); ctx.roundRect(x, y, s, s, 20); ctx.clip()
+      ctx.drawImage(img, x, y, s, s)
+      ctx.restore()
+    }
+  }
+  ctx.restore()
+}
+
+function drawCTAScene(ctx, width, height, scene, progress, theme, loadedImages, t) {
+  const pulse = 1 + Math.sin(t * 3) * 0.012
+  const alpha = Math.min(1, progress * 2)
+  const glowP = 10 + Math.sin(t * 4) * 6
 
   ctx.save()
   ctx.globalAlpha = alpha
@@ -541,9 +350,9 @@ function drawCTAScene(ctx, width, height, scene, progress, palette, frame, emoji
   ctx.font = 'bold 52px "Helvetica Neue", Arial, sans-serif'
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
-  ctx.shadowColor = palette.accent
-  ctx.shadowBlur = glowPulse
-  ctx.fillStyle = palette.accent
+  ctx.shadowColor = theme.accent
+  ctx.shadowBlur = glowP
+  ctx.fillStyle = theme.accent
   ctx.save()
   ctx.translate(width / 2, height * 0.28)
   ctx.scale(pulse, pulse)
@@ -552,56 +361,43 @@ function drawCTAScene(ctx, width, height, scene, progress, palette, frame, emoji
 
   ctx.shadowBlur = 0
   ctx.font = '36px "Helvetica Neue", Arial, sans-serif'
-  ctx.fillStyle = palette.text
+  ctx.fillStyle = theme.text
   const lines = wrapText(ctx, scene.subtitle, width * 0.78)
   const lineHeight = 46
-  const startY = height * 0.44
   lines.forEach((line, i) => {
-    const reduce = Math.max(0, 1 - i * 0.1)
     ctx.save()
-    ctx.globalAlpha = alpha * reduce
-    ctx.fillText(line, width / 2, startY + i * lineHeight)
+    ctx.globalAlpha = alpha * Math.max(0, 1 - i * 0.1)
+    ctx.fillText(line, width / 2, height * 0.44 + i * lineHeight)
     ctx.restore()
   })
 
-  const barColor = palette.accent
-  ctx.shadowColor = barColor
-  ctx.shadowBlur = 8
-  ctx.strokeStyle = barColor
-  ctx.lineWidth = 2.5
-  const barY = height * 0.35
-  const barWidth = 80 + Math.sin(frame * 0.035) * 15
-  ctx.beginPath(); ctx.moveTo(width / 2 - barWidth, barY); ctx.lineTo(width / 2 + barWidth, barY); ctx.stroke()
-  const barY2 = height * 0.55
-  ctx.beginPath(); ctx.moveTo(width / 2 - barWidth * 0.6, barY2); ctx.lineTo(width / 2 + barWidth * 0.6, barY2); ctx.stroke()
+  ctx.strokeStyle = theme.accent
+  ctx.lineWidth = 2
+  ctx.shadowColor = theme.accent
+  ctx.shadowBlur = 6
+  const bw = 80 + Math.sin(t * 2) * 10
+  ctx.beginPath(); ctx.moveTo(width / 2 - bw, height * 0.36); ctx.lineTo(width / 2 + bw, height * 0.36); ctx.stroke()
+  ctx.beginPath(); ctx.moveTo(width / 2 - bw * 0.6, height * 0.56); ctx.lineTo(width / 2 + bw * 0.6, height * 0.56); ctx.stroke()
   ctx.shadowBlur = 0
-
-  if (emoji) {
-    const bounce = Math.abs(Math.sin(frame * 0.04)) * 8
-    ctx.save()
-    ctx.globalAlpha = 0.2 * alpha
-    drawEmoji(ctx, emoji, width / 2, height * 0.66 - bounce, 60)
-    ctx.restore()
-  }
 
   if (loadedImages.length > 1) {
     const img = loadedImages[1].image
-    const imgSize = 100
-    const imgX = (width - imgSize) / 2
-    const imgY = height * 0.68
-    const imgAlpha = Math.min(1, progress * 2)
+    const s = 100; const x = (width - s) / 2; const y = height * 0.68
+    const ia = Math.min(1, progress * 2)
     ctx.save()
-    ctx.globalAlpha = imgAlpha * alpha
-    drawRoundedImage(ctx, img, imgX, imgY, imgSize, imgSize, 14, 'rgba(0,0,0,0.3)', 12)
+    ctx.globalAlpha = ia * alpha
+    ctx.shadowColor = 'rgba(0,0,0,0.3)'; ctx.shadowBlur = 10
+    ctx.beginPath(); ctx.roundRect(x, y, s, s, 12); ctx.clip()
+    ctx.drawImage(img, x, y, s, s)
     ctx.restore()
   }
   ctx.restore()
 }
 
-function drawOutroScene(ctx, width, height, scene, progress, palette, frame, emoji, loadedImages) {
-  const ease = easeOutCubic(Math.min(1, progress * 1.1))
-  const alpha = 1 - ease * 0.3
-  const scale = 1 - (1 - ease) * 0.2
+function drawOutroScene(ctx, width, height, scene, progress, theme, loadedImages, t) {
+  const p = easeOutCubic(Math.min(1, progress * 1.1))
+  const alpha = 1 - p * 0.3
+  const scale = 1 - (1 - p) * 0.15
 
   ctx.save()
   ctx.translate(width / 2, height * 0.42)
@@ -611,107 +407,87 @@ function drawOutroScene(ctx, width, height, scene, progress, palette, frame, emo
   ctx.textBaseline = 'middle'
 
   ctx.font = 'bold 52px "Helvetica Neue", Arial, sans-serif'
-  ctx.shadowColor = palette.accent
-  ctx.shadowBlur = 18
-  ctx.fillStyle = palette.accent
+  ctx.shadowColor = theme.accent
+  ctx.shadowBlur = 16
+  ctx.fillStyle = theme.accent
   ctx.fillText(scene.title, 0, 0)
 
   ctx.shadowBlur = 0
   ctx.font = '34px "Helvetica Neue", Arial, sans-serif'
-  ctx.fillStyle = palette.text
-  ctx.fillText(scene.subtitle, 0, 76)
-
-  if (emoji) {
-    ctx.save()
-    ctx.globalAlpha = 0.25 * alpha
-    drawEmoji(ctx, emoji, 0, -110, 55)
-    ctx.restore()
-  }
+  ctx.fillStyle = theme.text
+  ctx.fillText(scene.subtitle, 0, 74)
   ctx.restore()
 
-  const fadeOut = Math.max(0, 1 - (1 - progress) * 4)
-  if (fadeOut > 0) {
+  const fade = Math.max(0, 1 - (1 - progress) * 4)
+  if (fade > 0) {
     ctx.save()
-    ctx.globalAlpha = 1 - fadeOut
+    ctx.globalAlpha = 1 - fade
     ctx.fillStyle = '#000000'
     ctx.fillRect(0, 0, width, height)
     ctx.restore()
   }
 }
 
-function drawStar(ctx, cx, cy, spikes, outerRadius, innerRadius) {
-  let rot = Math.PI / 2 * 3; let x = cx; let y = cy
-  const step = Math.PI / spikes
-  ctx.beginPath(); ctx.moveTo(cx, cy - outerRadius)
-  for (let i = 0; i < spikes; i++) {
-    x = cx + Math.cos(rot) * outerRadius; y = cy + Math.sin(rot) * outerRadius; ctx.lineTo(x, y); rot += step
-    x = cx + Math.cos(rot) * innerRadius; y = cy + Math.sin(rot) * innerRadius; ctx.lineTo(x, y); rot += step
-  }
-  ctx.lineTo(cx, cy - outerRadius); ctx.closePath()
-}
+function drawCaptionBar(ctx, width, height, scene, progress, theme) {
+  const y = height - 165
+  const h = 85
 
-function drawCaptionBar(ctx, width, height, scene, progress, palette) {
-  const captionY = height - 170
-  const captionHeight = 90
-
-  ctx.fillStyle = 'rgba(0,0,0,0.65)'
+  ctx.fillStyle = 'rgba(0,0,0,0.6)'
   ctx.beginPath()
-  ctx.roundRect(40, captionY, width - 80, captionHeight, 16)
+  ctx.roundRect(35, y, width - 70, h, 14)
   ctx.fill()
 
   const words = scene.text.split(' ')
-  const wordsToShow = Math.floor(words.length * Math.min(1, progress * 1.1))
-  const captionText = words.slice(0, wordsToShow).join(' ')
+  const wc = Math.floor(words.length * Math.min(1, progress * 1.08))
+  const ct = words.slice(0, wc).join(' ')
 
   ctx.font = '28px "Helvetica Neue", Arial, sans-serif'
   ctx.textAlign = 'center'
-  ctx.fillStyle = '#FFFFFF'
-  ctx.shadowColor = 'rgba(0,0,0,0.4)'
-  ctx.shadowBlur = 3
+  ctx.fillStyle = '#ffffff'
+  ctx.shadowColor = 'rgba(0,0,0,0.3)'
+  ctx.shadowBlur = 2
 
-  const captionLines = wrapText(ctx, captionText, width - 120)
-  const captionLineHeight = 36
-  const captionStartY = captionY + 30
-  captionLines.slice(0, 2).forEach((line, i) => {
-    ctx.fillText(line, width / 2, captionStartY + i * captionLineHeight)
+  const lines = wrapText(ctx, ct, width - 110)
+  lines.slice(0, 2).forEach((line, i) => {
+    ctx.fillText(line, width / 2, y + 33 + i * 36)
   })
   ctx.shadowBlur = 0
 }
 
-function drawProgressBar(ctx, width, height, progress, palette) {
-  const barWidth = width - 80; const barHeight = 3
-  const x = 40; const y = height - 45
-  ctx.fillStyle = 'rgba(255,255,255,0.12)'
-  ctx.beginPath(); ctx.roundRect(x, y, barWidth, barHeight, 2); ctx.fill()
-  const gradient = ctx.createLinearGradient(x, y, x + barWidth * progress, y)
-  gradient.addColorStop(0, palette.accent)
-  gradient.addColorStop(0.5, palette.glow || palette.accent)
-  gradient.addColorStop(1, palette.bg1)
-  ctx.fillStyle = gradient
-  ctx.beginPath(); ctx.roundRect(x, y, barWidth * progress, barHeight, 2); ctx.fill()
+function drawProgressBar(ctx, width, height, progress, theme) {
+  const bw = width - 70; const bh = 3
+  const x = 35; const y = height - 42
+
+  ctx.fillStyle = 'rgba(255,255,255,0.1)'
+  ctx.beginPath(); ctx.roundRect(x, y, bw, bh, 2); ctx.fill()
+
+  const grad = ctx.createLinearGradient(x, y, x + bw * progress, y)
+  grad.addColorStop(0, theme.accent)
+  grad.addColorStop(1, theme.glow)
+  ctx.fillStyle = grad
+  ctx.beginPath(); ctx.roundRect(x, y, bw * progress, bh, 2); ctx.fill()
 }
 
 function wrapText(ctx, text, maxWidth) {
   const words = text.split(' ')
   let line = ''; const lines = []
   for (const word of words) {
-    const testLine = line + word + ' '
-    if (ctx.measureText(testLine).width > maxWidth && line) {
+    const tl = line + word + ' '
+    if (ctx.measureText(tl).width > maxWidth && line) {
       lines.push(line.trim()); line = word + ' '
-    } else { line = testLine }
+    } else { line = tl }
   }
   lines.push(line.trim())
   return lines
 }
 
 function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3) }
-function easeOutBack(t) { const c1 = 1.70158; const c3 = c1 + 1; return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2) }
 
 export function createVideoUrl(blob) {
   return URL.createObjectURL(blob)
 }
 
-export function downloadVideo(blob, filename = 'advertisement') {
+export function downloadBlob(blob, filename = 'advertisement') {
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url; a.download = `${filename}.webm`

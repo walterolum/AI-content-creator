@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import Button from '../ui/Button'
-import Select from '../ui/Select'
 import { useToast } from '../../contexts/ToastContext'
 import {
   speak, stopSpeech, pauseSpeech, resumeSpeech,
@@ -9,10 +8,11 @@ import {
 import {
   generateAdVideo, createVideoUrl, getScenesForContent
 } from '../../lib/video'
+import VideoPlayer from './VideoPlayer'
 import {
-  Mic, Play, Pause, Square, Music, Volume2,
-  Film, Download, RefreshCw, Sparkles, Smile,
-  Edit3, Layers, Radio
+  Play, Pause, Square, Music, Volume2,
+  Film, RefreshCw, Sparkles, Smile,
+  Edit3, Layers, Radio, Shuffle
 } from 'lucide-react'
 
 const voiceStyleGroups = [
@@ -43,8 +43,8 @@ export default function AdEditor({ content: initialContent, platform, images, on
   const [showVideo, setShowVideo] = useState(false)
   const [videoProgress, setVideoProgress] = useState(0)
   const [adPlaying, setAdPlaying] = useState(false)
+  const [generationKey, setGenerationKey] = useState(0)
 
-  const videoRef = useRef(null)
   const sceneTimerRef = useRef(null)
   const { addToast } = useToast()
 
@@ -57,9 +57,7 @@ export default function AdEditor({ content: initialContent, platform, images, on
   }, [])
 
   useEffect(() => {
-    return () => {
-      if (sceneTimerRef.current) clearTimeout(sceneTimerRef.current)
-    }
+    return () => { if (sceneTimerRef.current) clearTimeout(sceneTimerRef.current) }
   }, [])
 
   const handlePlayAd = useCallback(() => {
@@ -69,13 +67,13 @@ export default function AdEditor({ content: initialContent, platform, images, on
       return
     }
     const scenes = getScenesForContent(content)
-    let sceneIndex = 0
+    let idx = 0
     setCurrentCaption(scenes[0]?.text || '')
     const updateCaption = () => {
-      sceneIndex++
-      if (sceneIndex < scenes.length) {
-        setCurrentCaption(scenes[sceneIndex].text)
-        sceneTimerRef.current = setTimeout(updateCaption, scenes[sceneIndex].duration)
+      idx++
+      if (idx < scenes.length) {
+        setCurrentCaption(scenes[idx].text)
+        sceneTimerRef.current = setTimeout(updateCaption, scenes[idx].duration)
       }
     }
     sceneTimerRef.current = setTimeout(updateCaption, scenes[0]?.duration || 7000)
@@ -84,60 +82,55 @@ export default function AdEditor({ content: initialContent, platform, images, on
       onEnd: () => { setSpeaking(false); setAdPlaying(false); setCurrentCaption(''); clearTimeout(sceneTimerRef.current) },
       voiceVolume, musicVolume, useReverb, useEcho,
     })
-    setSpeaking(true)
-    setAdPlaying(true)
-    addToast('Playing advertisement...', 'info')
+    setSpeaking(true); setAdPlaying(true)
   }, [content, selectedVoice, withMusic, musicGenre, voiceVolume, musicVolume, useReverb, useEcho, speaking, paused, addToast])
 
   const handleStopAd = () => {
     stopSpeech()
     setSpeaking(false); setPaused(false); setAdPlaying(false)
-    setCurrentCaption('')
-    clearTimeout(sceneTimerRef.current)
+    setCurrentCaption(''); clearTimeout(sceneTimerRef.current)
   }
 
-  const handleGenerateVideo = async () => {
+  const renderVideo = async () => {
     if (!content) { addToast('No content to render', 'error'); return }
     setIsGeneratingVideo(true)
     setVideoProgress(0)
-    addToast('Creating 30-second advertisement...', 'info')
-    const progressInterval = setInterval(() => { setVideoProgress(prev => Math.min(prev + 3, 90)) }, 500)
+    const pi = setInterval(() => { setVideoProgress(prev => Math.min(prev + 4, 90)) }, 400)
     try {
       const files = images ? images.map(f => f.file) : []
-      const blob = await generateAdVideo(content, platform || 'instagram', { images: files, showEmojis })
+      const blob = await generateAdVideo(content, platform || 'instagram', { images: files })
       const url = createVideoUrl(blob)
+      if (videoUrl) URL.revokeObjectURL(videoUrl)
       setVideoUrl(url)
       setShowVideo(true)
       setVideoProgress(100)
-      addToast('Video ready!', 'success')
+      addToast('Video ready! Each render has a unique look.', 'success')
     } catch (error) {
       addToast('Failed: ' + error.message, 'error')
     } finally {
       setIsGeneratingVideo(false)
-      clearInterval(progressInterval)
+      clearInterval(pi)
     }
   }
 
   const handlePlayVideoWithVoice = () => {
-    const video = videoRef.current
-    if (!video) return
-    video.play()
+    if (adPlaying) return
     setAdPlaying(true)
     setTimeout(() => {
       const scenes = getScenesForContent(content)
-      let sceneIndex = 0
+      let idx = 0
       setCurrentCaption(scenes[0]?.text || '')
       const updateCaption = () => {
-        sceneIndex++
-        if (sceneIndex < scenes.length) {
-          setCurrentCaption(scenes[sceneIndex].text)
-          sceneTimerRef.current = setTimeout(updateCaption, scenes[sceneIndex].duration)
+        idx++
+        if (idx < scenes.length) {
+          setCurrentCaption(scenes[idx].text)
+          sceneTimerRef.current = setTimeout(updateCaption, scenes[idx].duration)
         }
       }
       sceneTimerRef.current = setTimeout(updateCaption, scenes[0]?.duration || 7000)
       speak(content, selectedVoice, {
         withMusic, musicGenre,
-        onEnd: () => { setSpeaking(false); setCurrentCaption(''); clearTimeout(sceneTimerRef.current) },
+        onEnd: () => { setSpeaking(false); setCurrentCaption(''); clearTimeout(sceneTimerRef.current); setAdPlaying(false) },
         voiceVolume, musicVolume, useReverb, useEcho,
       })
       setSpeaking(true)
@@ -145,9 +138,14 @@ export default function AdEditor({ content: initialContent, platform, images, on
   }
 
   const handleStopVideo = () => {
-    const video = videoRef.current
-    if (video) { video.pause(); video.currentTime = 0 }
     handleStopAd()
+  }
+
+  const handleNewVideo = () => {
+    setShowVideo(false)
+    if (videoUrl) { URL.revokeObjectURL(videoUrl); setVideoUrl(null) }
+    setGenerationKey(k => k + 1)
+    renderVideo()
   }
 
   const sectionTabs = [
@@ -158,7 +156,6 @@ export default function AdEditor({ content: initialContent, platform, images, on
 
   return (
     <div className="bg-gradient-to-br from-gray-900 via-gray-950 to-black rounded-2xl border border-white/10 overflow-hidden shadow-2xl">
-      {/* Header */}
       <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center">
@@ -169,19 +166,9 @@ export default function AdEditor({ content: initialContent, platform, images, on
             <p className="text-xs text-gray-500">Customize your professional advertisement</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          {videoUrl && (
-            <Button size="sm" onClick={() => { const a = document.createElement('a'); a.href = videoUrl; a.download = 'advertisement.webm'; a.click() }} variant="ghost" className="text-white border border-white/20">
-              <Download className="w-4 h-4" />
-            </Button>
-          )}
-          <Button size="sm" onClick={onClose} variant="ghost" className="text-white border border-white/20">
-            Close
-          </Button>
-        </div>
+        <Button size="sm" onClick={onClose} variant="ghost" className="text-white border border-white/20">Close</Button>
       </div>
 
-      {/* Section Tabs */}
       <div className="flex gap-1 px-4 py-3 bg-white/5 border-b border-white/5">
         {sectionTabs.map(tab => (
           <button key={tab.id} onClick={() => setActiveSection(tab.id)}
@@ -336,46 +323,65 @@ export default function AdEditor({ content: initialContent, platform, images, on
             {!showVideo ? (
               <div>
                 <div className="grid grid-cols-3 gap-2 mb-4">
-                  <div className="p-3 bg-white/5 rounded-xl text-center"><p className="text-[10px] text-purple-300">Duration</p><p className="text-sm font-bold text-white">30s</p></div>
-                  <div className="p-3 bg-white/5 rounded-xl text-center"><p className="text-[10px] text-purple-300">Quality</p><p className="text-sm font-bold text-white">HD</p></div>
-                  <div className="p-3 bg-white/5 rounded-xl text-center"><p className="text-[10px] text-purple-300">Ratio</p><p className="text-sm font-bold text-white">9:16</p></div>
+                  <div className="p-3 bg-white/5 rounded-xl text-center">
+                    <p className="text-[10px] text-purple-300">Duration</p>
+                    <p className="text-sm font-bold text-white">30s</p>
+                  </div>
+                  <div className="p-3 bg-white/5 rounded-xl text-center">
+                    <p className="text-[10px] text-purple-300">Quality</p>
+                    <p className="text-sm font-bold text-white">HD</p>
+                  </div>
+                  <div className="p-3 bg-white/5 rounded-xl text-center">
+                    <p className="text-[10px] text-purple-300">Theme</p>
+                    <p className="text-sm font-bold text-amber-400">Random</p>
+                  </div>
                 </div>
 
                 <p className="text-xs text-gray-500 mb-4 leading-relaxed">
-                  Upload product images in the Media tab to showcase them in scenes. Use <code className="text-amber-400">:rocket:</code> <code className="text-amber-400">:fire:</code> in content for emojis.
+                  Each generation picks from 15 unique color themes with random motion. Click <strong className="text-amber-400">Generate</strong> now, or <strong className="text-amber-400">Generate New</strong> later for a different look.
                 </p>
 
                 {isGeneratingVideo && (
                   <div className="mb-4">
-                    <div className="flex justify-between text-xs text-purple-300 mb-1"><span>Rendering studio scenes...</span><span>{videoProgress}%</span></div>
-                    <div className="w-full bg-white/10 rounded-full h-2"><div className="bg-gradient-to-r from-purple-500 to-pink-500 h-2 rounded-full transition-all" style={{ width: `${videoProgress}%` }} /></div>
+                    <div className="flex justify-between text-xs text-purple-300 mb-1">
+                      <span>Rendering...</span>
+                      <span>{videoProgress}%</span>
+                    </div>
+                    <div className="w-full bg-white/10 rounded-full h-2">
+                      <div className="bg-gradient-to-r from-purple-500 to-pink-500 h-2 rounded-full transition-all" style={{ width: `${videoProgress}%` }} />
+                    </div>
                   </div>
                 )}
 
-                <Button onClick={handleGenerateVideo} disabled={isGeneratingVideo}
+                <Button onClick={renderVideo} disabled={isGeneratingVideo}
                   className="w-full bg-gradient-to-r from-purple-600 to-pink-600">
-                  {isGeneratingVideo ? <><RefreshCw className="w-4 h-4 mr-2 animate-spin" /> Creating...</> : <><Film className="w-4 h-4 mr-2" /> Generate Studio Ad</>}
+                  {isGeneratingVideo ? <><RefreshCw className="w-4 h-4 mr-2 animate-spin" /> Creating...</> : <><Film className="w-4 h-4 mr-2" /> Generate Video</>}
                 </Button>
               </div>
             ) : (
               <div className="space-y-3">
-                <div className="relative rounded-xl overflow-hidden bg-black">
-                  <video ref={videoRef} src={videoUrl} className="w-full max-w-[260px] mx-auto block rounded-lg"
-                    style={{ maxHeight: '420px' }} onPlay={handlePlayVideoWithVoice} />
-                  {currentCaption && (
-                    <div className="absolute bottom-12 left-3 right-3">
-                      <div className="bg-black/70 backdrop-blur rounded-lg p-2 border border-white/10">
-                        <p className="text-center text-white text-xs font-medium">{currentCaption}</p>
-                      </div>
-                    </div>
-                  )}
+                <div onPlay={handlePlayVideoWithVoice}>
+                  <VideoPlayer
+                    key={generationKey}
+                    src={videoUrl}
+                    onStop={handleStopVideo}
+                    onNew={handleNewVideo}
+                  />
                 </div>
-                <div className="flex gap-2 justify-center">
-                  <Button onClick={() => downloadVideo(videoUrl)} className="bg-gradient-to-r from-purple-600 to-pink-600" size="sm">
-                    <Download className="w-4 h-4 mr-1" /> Download
+
+                {currentCaption && (
+                  <div className="bg-black/60 backdrop-blur rounded-lg p-2.5 border border-white/10">
+                    <p className="text-center text-white text-xs font-medium">{currentCaption}</p>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-2">
+                  <Button onClick={handleNewVideo} className="bg-gradient-to-r from-amber-600 to-orange-600" size="sm">
+                    <Shuffle className="w-4 h-4 mr-1.5" /> Generate New
                   </Button>
-                  <Button onClick={handleStopVideo} variant="ghost" size="sm" className="text-white border border-white/20">Stop</Button>
-                  <Button onClick={() => { setShowVideo(false); setVideoUrl(null); handleStopAd() }} variant="ghost" size="sm" className="text-white border border-white/20">New</Button>
+                  <Button onClick={handleStopVideo} variant="ghost" size="sm" className="text-white border border-white/20">
+                    <Square className="w-4 h-4 mr-1.5" /> Stop
+                  </Button>
                 </div>
               </div>
             )}
