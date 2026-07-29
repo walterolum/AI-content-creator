@@ -1,11 +1,6 @@
-// Professional Audio System with Voice Selection, Background Music, and Mixing
-
-// Clean content for speech (remove hashtags, emojis, special characters)
 export function cleanContentForSpeech(text) {
   if (!text) return ''
-
   let cleaned = text
-    // Remove emojis
     .replace(/[\u{1F600}-\u{1F64F}]/gu, '')
     .replace(/[\u{1F300}-\u{1F5FF}]/gu, '')
     .replace(/[\u{1F680}-\u{1F6FF}]/gu, '')
@@ -15,132 +10,168 @@ export function cleanContentForSpeech(text) {
     .replace(/[\u{1F900}-\u{1F9FF}]/gu, '')
     .replace(/[\u{1FA00}-\u{1FA6F}]/gu, '')
     .replace(/[\u{1FA70}-\u{1FAFF}]/gu, '')
-    // Remove hashtags
     .replace(/#\w+/g, '')
-    // Remove markdown headers
     .replace(/^#{1,6}\s/gm, '')
-    // Remove markdown formatting
     .replace(/\*\*/g, '')
     .replace(/\*/g, '')
     .replace(/`/g, '')
-    // Remove URLs
     .replace(/https?:\/\/\S+/g, '')
-    // Remove list markers
     .replace(/^\d+\.\s/gm, '')
     .replace(/^[-*]\s/gm, '')
-    // Remove section labels but keep content
     .replace(/## Hook/gi, '')
     .replace(/## Caption/gi, '')
     .replace(/## Call-to-Action/gi, '')
     .replace(/## CTA/gi, '')
     .replace(/## Hashtags/gi, '')
-    // Remove multiple spaces
     .replace(/\s+/g, ' ')
     .trim()
-
   return cleaned
 }
 
-// Voice profiles for professional advertising
 export const voiceProfiles = [
   {
-    id: 'cinematic-male',
-    name: 'Cinematic Male',
-    description: 'Deep, dramatic voice for movie-style trailers',
-    rate: 0.85,
-    pitch: 0.7,
-    preferred: ['Google UK English Male', 'Daniel', 'Alex'],
-    style: 'cinematic',
+    id: 'radio-presenter',
+    name: 'Radio Presenter',
+    description: 'Warm, engaging voice like BBC Radio presenter',
+    rate: 0.92,
+    pitch: 0.95,
+    preferred: ['Google UK English Female', 'Samantha', 'Daniel'],
+    style: 'radio',
+    emphasis: 'natural',
   },
   {
-    id: 'cinematic-female',
-    name: 'Cinematic Female',
-    description: 'Strong, commanding voice for dramatic content',
-    rate: 0.85,
-    pitch: 1.0,
+    id: 'advertiser-male',
+    name: 'Advertiser (Male)',
+    description: 'Bold, persuasive male voice like TV commercials',
+    rate: 0.88,
+    pitch: 0.8,
+    preferred: ['Google UK English Male', 'Daniel', 'Alex'],
+    style: 'advertiser',
+    emphasis: 'strong',
+  },
+  {
+    id: 'advertiser-female',
+    name: 'Advertiser (Female)',
+    description: 'Convincing female voice for product ads',
+    rate: 0.9,
+    pitch: 1.05,
     preferred: ['Google UK English Female', 'Samantha', 'Victoria'],
+    style: 'advertiser',
+    emphasis: 'strong',
+  },
+  {
+    id: 'corporate-narrator',
+    name: 'Corporate Narrator',
+    description: 'Authoritative, trustworthy voice for business',
+    rate: 0.85,
+    pitch: 0.85,
+    preferred: ['Google UK English Male', 'Daniel'],
+    style: 'corporate',
+    emphasis: 'precise',
+  },
+  {
+    id: 'luxury-brand',
+    name: 'Luxury Brand Voice',
+    description: 'Elegant, sophisticated for premium products',
+    rate: 0.78,
+    pitch: 0.9,
+    preferred: ['Google UK English Female', 'Samantha'],
+    style: 'luxury',
+    emphasis: 'smooth',
+  },
+  {
+    id: 'energetic-promo',
+    name: 'Energetic Promoter',
+    description: 'High-energy hype voice for launches',
+    rate: 1.2,
+    pitch: 1.0,
+    preferred: ['Google US English', 'Fred', 'Alex'],
+    style: 'energetic',
+    emphasis: 'excited',
+  },
+  {
+    id: 'documentary-narrator',
+    name: 'Documentary Narrator',
+    description: 'Deep, cinematic narrator like BBC Earth',
+    rate: 0.8,
+    pitch: 0.75,
+    preferred: ['Google UK English Male', 'Daniel'],
     style: 'cinematic',
+    emphasis: 'dramatic',
+  },
+  {
+    id: 'news-anchor',
+    name: 'News Anchor',
+    description: 'Formal, credible voice for announcements',
+    rate: 0.95,
+    pitch: 0.9,
+    preferred: ['Google US English', 'Alex', 'Samantha'],
+    style: 'news',
+    emphasis: 'formal',
+  },
+  {
+    id: 'friendly-host',
+    name: 'Friendly Host',
+    description: 'Warm, approachable voice for lifestyle',
+    rate: 1.0,
+    pitch: 1.1,
+    preferred: ['Google US English', 'Karen', 'Moira'],
+    style: 'friendly',
+    emphasis: 'conversational',
   },
   {
     id: 'professional-male',
     name: 'Professional Male',
-    description: 'Deep, authoritative male voice for corporate content',
+    description: 'Clear, confident corporate voice',
     rate: 0.9,
     pitch: 0.8,
     preferred: ['Google UK English Male', 'Daniel', 'Alex'],
     style: 'professional',
+    emphasis: 'clear',
   },
   {
     id: 'professional-female',
     name: 'Professional Female',
-    description: 'Clear, confident female voice for business content',
+    description: 'Confident female voice for business',
     rate: 0.9,
     pitch: 1.1,
     preferred: ['Google UK English Female', 'Samantha', 'Victoria'],
     style: 'professional',
+    emphasis: 'clear',
   },
   {
-    id: 'modern-male',
-    name: 'Modern Male',
-    description: 'Young, trendy voice for social media',
-    rate: 1.0,
-    pitch: 0.9,
-    preferred: ['Google US English', 'Tom', 'Jason'],
-    style: 'modern',
-  },
-  {
-    id: 'modern-female',
-    name: 'Modern Female',
-    description: 'Fresh, engaging voice for lifestyle content',
-    rate: 1.0,
-    pitch: 1.2,
-    preferred: ['Google US English', 'Karen', 'Moira'],
-    style: 'modern',
-  },
-  {
-    id: 'luxury',
-    name: 'Luxury Voice',
-    description: 'Elegant, sophisticated voice for premium brands',
-    rate: 0.8,
-    pitch: 0.9,
-    preferred: ['Google UK English Female', 'Samantha'],
-    style: 'luxury',
-  },
-  {
-    id: 'energetic',
-    name: 'Energetic',
-    description: 'High-energy voice for promotions and sales',
-    rate: 1.15,
-    pitch: 1.0,
-    preferred: ['Google US English', 'Fred'],
-    style: 'energetic',
-  },
-  {
-    id: 'narrator',
-    name: 'Documentary Narrator',
-    description: 'Authoritative voice for storytelling',
+    id: 'storyteller',
+    name: 'Storyteller',
+    description: 'Expressive narrative voice for brand stories',
     rate: 0.88,
-    pitch: 0.85,
-    preferred: ['Google UK English Male', 'Daniel'],
-    style: 'narrator',
-  },
-  {
-    id: 'news',
-    name: 'News Anchor',
-    description: 'Formal voice for announcements',
-    rate: 0.95,
     pitch: 0.9,
-    preferred: ['Google US English', 'Alex'],
-    style: 'news',
+    preferred: ['Google UK English Male', 'Daniel', 'Samantha'],
+    style: 'story',
+    emphasis: 'expressive',
   },
+]
+
+export const musicGenres = [
+  { id: 'none', name: 'No Music' },
+  { id: 'cinematic', name: 'Cinematic Orchestra' },
+  { id: 'corporate', name: 'Corporate Inspiring' },
+  { id: 'upbeat', name: 'Upbeat Energetic' },
+  { id: 'luxury', name: 'Luxury Ambient' },
+  { id: 'modern', name: 'Modern Pop' },
+  { id: 'jazz', name: 'Smooth Jazz' },
+  { id: 'electronic', name: 'Electronic Pulse' },
+  { id: 'acoustic', name: 'Acoustic Warm' },
+  { id: 'drone', name: 'Cinematic Drone' },
+  { id: 'piano', name: 'Emotional Piano' },
 ]
 
 let currentUtterance = null
 let backgroundMusicNode = null
 let audioContext = null
 let isBackgroundPlaying = false
+let reverbNode = null
+let echoNode = null
 
-// Get available voices
 export function getAvailableVoices() {
   return new Promise((resolve) => {
     let voices = speechSynthesis.getVoices()
@@ -154,22 +185,18 @@ export function getAvailableVoices() {
   })
 }
 
-// Find best matching voice
 function findVoice(profile) {
   const voices = speechSynthesis.getVoices()
-
   for (const preferred of profile.preferred) {
     const found = voices.find(v =>
       v.name.includes(preferred) || v.name === preferred
     )
     if (found) return found
   }
-
   return voices.find(v => v.lang.startsWith('en')) || voices[0]
 }
 
-// Generate background music buffer
-function createBackgroundMusic(duration = 30) {
+function createBackgroundMusic(duration = 30, genre = 'cinematic') {
   if (!audioContext) {
     audioContext = new (window.AudioContext || window.webkitAudioContext)()
   }
@@ -177,46 +204,155 @@ function createBackgroundMusic(duration = 30) {
   const sampleRate = audioContext.sampleRate
   const samples = sampleRate * duration
   const buffer = audioContext.createBuffer(2, samples, sampleRate)
-
   const leftChannel = buffer.getChannelData(0)
   const rightChannel = buffer.getChannelData(1)
 
   for (let i = 0; i < samples; i++) {
     const t = i / sampleRate
+    let sample = 0
 
-    // Ambient pad sound
-    const pad1 = Math.sin(2 * Math.PI * 110 * t) * 0.04
-    const pad2 = Math.sin(2 * Math.PI * 165 * t) * 0.03
-    const pad3 = Math.sin(2 * Math.PI * 220 * t) * 0.02
-    const pad4 = Math.sin(2 * Math.PI * 330 * t) * 0.01
+    switch (genre) {
+      case 'cinematic':
+        sample = generateCinematic(t, duration)
+        break
+      case 'corporate':
+        sample = generateCorporate(t, duration)
+        break
+      case 'upbeat':
+        sample = generateUpbeat(t, duration)
+        break
+      case 'luxury':
+        sample = generateLuxury(t, duration)
+        break
+      case 'modern':
+        sample = generateModern(t, duration)
+        break
+      case 'jazz':
+        sample = generateJazz(t, duration)
+        break
+      case 'electronic':
+        sample = generateElectronic(t, duration)
+        break
+      case 'acoustic':
+        sample = generateAcoustic(t, duration)
+        break
+      case 'drone':
+        sample = generateDrone(t, duration)
+        break
+      case 'piano':
+        sample = generatePiano(t, duration)
+        break
+      default:
+        sample = 0
+    }
 
-    // Slow modulation for movement
-    const mod = Math.sin(2 * Math.PI * 0.08 * t) * 0.3 + 0.7
-
-    // Fade in/out
     const fadeTime = 2
     let envelope = 1
     if (t < fadeTime) envelope = t / fadeTime
     if (t > duration - fadeTime) envelope = (duration - t) / fadeTime
 
-    const sample = (pad1 + pad2 + pad3 + pad4) * mod * envelope * 0.5
-
-    leftChannel[i] = sample
-    rightChannel[i] = sample * (0.95 + Math.random() * 0.05)
+    const finalSample = sample * envelope * 0.4
+    leftChannel[i] = finalSample
+    rightChannel[i] = finalSample * (0.95 + Math.random() * 0.05)
   }
 
   return buffer
 }
 
-// Play background music
-export function playBackgroundMusic(duration = 30) {
+function generateCinematic(t, duration) {
+  const pad1 = Math.sin(2 * Math.PI * 55 * t) * 0.06
+  const pad2 = Math.sin(2 * Math.PI * 82.5 * t) * 0.04
+  const pad3 = Math.sin(2 * Math.PI * 110 * t) * 0.03
+  const pad4 = Math.sin(2 * Math.PI * 165 * t) * 0.02
+  const mod = Math.sin(2 * Math.PI * 0.06 * t) * 0.3 + 0.7
+  const swell = Math.sin(2 * Math.PI * 0.15 * t) * 0.2 + 0.8
+  return (pad1 + pad2 + pad3 + pad4) * mod * swell
+}
+
+function generateCorporate(t, duration) {
+  const pad1 = Math.sin(2 * Math.PI * 65 * t) * 0.05
+  const pad2 = Math.sin(2 * Math.PI * 130 * t) * 0.03
+  const pad3 = Math.sin(2 * Math.PI * 195 * t) * 0.02
+  const rhythm = Math.sin(2 * Math.PI * 2.0 * t) * 0.5 + 0.5
+  const pulse = Math.sin(2 * Math.PI * 1.2 * t) * 0.3 + 0.7
+  return (pad1 + pad2 + pad3) * pulse * rhythm * 0.5 + 0.03
+}
+
+function generateUpbeat(t, duration) {
+  const bass = Math.sin(2 * Math.PI * 110 * t) * 0.06
+  const chord1 = Math.sin(2 * Math.PI * 165 * t) * 0.03
+  const chord2 = Math.sin(2 * Math.PI * 220 * t) * 0.03
+  const beat = Math.sin(2 * Math.PI * 4.0 * t) > 0 ? 0.04 : -0.04
+  const mod = Math.sin(2 * Math.PI * 0.1 * t) * 0.4 + 0.6
+  return (bass + chord1 + chord2 + beat) * mod
+}
+
+function generateLuxury(t, duration) {
+  const warm1 = Math.sin(2 * Math.PI * 82 * t) * 0.04
+  const warm2 = Math.sin(2 * Math.PI * 164 * t) * 0.03
+  const warm3 = Math.sin(2 * Math.PI * 246 * t) * 0.02
+  const shimmer = Math.sin(2 * Math.PI * (328 + Math.sin(t * 0.5) * 2) * t) * 0.01
+  const mod = Math.sin(2 * Math.PI * 0.04 * t) * 0.2 + 0.8
+  return (warm1 + warm2 + warm3 + shimmer) * mod
+}
+
+function generateModern(t, duration) {
+  const bass = Math.sin(2 * Math.PI * 130 * t) * 0.05
+  const synth1 = Math.sin(2 * Math.PI * 200 * t) * 0.025
+  const synth2 = Math.sin(2 * Math.PI * 266 * t) * 0.025
+  const hihat = Math.random() > 0.95 ? 0.03 : 0
+  const mod = Math.sin(2 * Math.PI * 0.15 * t) * 0.5 + 0.5
+  return (bass + synth1 + synth2 + hihat) * mod
+}
+
+function generateJazz(t, duration) {
+  const bass = Math.sin(2 * Math.PI * 98 * t) * 0.05
+  const chord = Math.sin(2 * Math.PI * 147 * t) * 0.03 + Math.sin(2 * Math.PI * 185 * t) * 0.03
+  const brush = Math.sin(2 * Math.PI * (t * 5)) * 0.01 + Math.sin(2 * Math.PI * (t * 3.5)) * 0.01
+  const mod = Math.sin(2 * Math.PI * 0.08 * t) * 0.3 + 0.7
+  return (bass + chord + brush) * mod
+}
+
+function generateElectronic(t, duration) {
+  const pulse = Math.sin(2 * Math.PI * 2.5 * t) > 0 ? 0.05 : -0.05
+  const sub = Math.sin(2 * Math.PI * 60 * t) * 0.06
+  const lead = Math.sin(2 * Math.PI * (240 + Math.sin(t * 2) * 10) * t) * 0.02
+  const arp = Math.sin(2 * Math.PI * (t * 440 * (1 + 0.5 * Math.sin(t * 3)))) * 0.015
+  return pulse + sub + lead + arp
+}
+
+function generateAcoustic(t, duration) {
+  const strum1 = Math.sin(2 * Math.PI * 165 * t) * 0.04
+  const strum2 = Math.sin(2 * Math.PI * 208 * t) * 0.03
+  const strum3 = Math.sin(2 * Math.PI * 262 * t) * 0.02
+  const mod = Math.sin(2 * Math.PI * 0.1 * t) * 0.4 + 0.6
+  return (strum1 + strum2 + strum3) * mod
+}
+
+function generateDrone(t, duration) {
+  const drone1 = Math.sin(2 * Math.PI * 55 * t) * 0.05
+  const drone2 = Math.sin(2 * Math.PI * 60.5 * t) * 0.04
+  const drone3 = Math.sin(2 * Math.PI * 66 * t) * 0.03
+  const mod = Math.sin(2 * Math.PI * 0.02 * t) * 0.3 + 0.7
+  return (drone1 + drone2 + drone3) * mod
+}
+
+function generatePiano(t, duration) {
+  const note1 = Math.sin(2 * Math.PI * 262 * t) * 0.04
+  const note2 = Math.sin(2 * Math.PI * 330 * t) * 0.03
+  const note3 = Math.sin(2 * Math.PI * 392 * t) * 0.02
+  const decay = Math.exp(-t * 0.5) * 0.5 + 0.5
+  const mod = Math.sin(2 * Math.PI * 0.12 * t) * 0.3 + 0.7
+  return (note1 + note2 + note3) * decay * mod
+}
+
+export function playBackgroundMusic(duration = 30, genre = 'cinematic') {
   if (!audioContext) {
     audioContext = new (window.AudioContext || window.webkitAudioContext)()
   }
-
   stopBackgroundMusic()
 
-  const buffer = createBackgroundMusic(duration)
+  const buffer = createBackgroundMusic(duration, genre)
   const source = audioContext.createBufferSource()
   source.buffer = buffer
 
@@ -225,29 +361,37 @@ export function playBackgroundMusic(duration = 30) {
 
   source.connect(gainNode)
   gainNode.connect(audioContext.destination)
-
   source.start()
   backgroundMusicNode = { source, gainNode }
   isBackgroundPlaying = true
-
-  source.onended = () => {
-    isBackgroundPlaying = false
-  }
+  source.onended = () => { isBackgroundPlaying = false }
 }
 
-// Stop background music
 export function stopBackgroundMusic() {
   if (backgroundMusicNode) {
-    try {
-      backgroundMusicNode.source.stop()
-    } catch (e) {}
+    try { backgroundMusicNode.source.stop() } catch (e) {}
     backgroundMusicNode = null
   }
+  resetEffects()
   isBackgroundPlaying = false
 }
 
-// Main speech function with background music
-export function speak(text, profileId = 'cinematic-male', withMusic = true, onEnd = null) {
+function resetEffects() {
+  reverbNode = null
+  echoNode = null
+}
+
+export function speak(text, profileId = 'radio-presenter', options = {}) {
+  const {
+    withMusic = true,
+    musicGenre = 'cinematic',
+    onEnd = null,
+    voiceVolume = 1,
+    musicVolume = 0.3,
+    useReverb = false,
+    useEcho = false,
+  } = options
+
   stopSpeech()
 
   const profile = voiceProfiles.find(p => p.id === profileId) || voiceProfiles[0]
@@ -261,7 +405,7 @@ export function speak(text, profileId = 'cinematic-male', withMusic = true, onEn
   currentUtterance = new SpeechSynthesisUtterance(cleanedText)
   currentUtterance.rate = profile.rate
   currentUtterance.pitch = profile.pitch
-  currentUtterance.volume = 1
+  currentUtterance.volume = voiceVolume
   currentUtterance.lang = 'en-US'
 
   const voice = findVoice(profile)
@@ -269,9 +413,11 @@ export function speak(text, profileId = 'cinematic-male', withMusic = true, onEn
     currentUtterance.voice = voice
   }
 
-  // Start background music if requested
-  if (withMusic) {
-    playBackgroundMusic(30)
+  if (withMusic && musicGenre !== 'none') {
+    playBackgroundMusic(30, musicGenre)
+    if (backgroundMusicNode) {
+      backgroundMusicNode.gainNode.gain.value = musicVolume
+    }
   }
 
   currentUtterance.onend = () => {
@@ -290,7 +436,6 @@ export function speak(text, profileId = 'cinematic-male', withMusic = true, onEn
   speechSynthesis.speak(currentUtterance)
 }
 
-// Stop speech
 export function stopSpeech() {
   if (speechSynthesis.speaking) {
     speechSynthesis.cancel()
@@ -299,17 +444,15 @@ export function stopSpeech() {
   stopBackgroundMusic()
 }
 
-// Pause speech
 export function pauseSpeech() {
   if (speechSynthesis.speaking) {
     speechSynthesis.pause()
   }
   if (backgroundMusicNode) {
-    backgroundMusicNode.gainNode.gain.value = 0.1
+    backgroundMusicNode.gainNode.gain.value = 0.08
   }
 }
 
-// Resume speech
 export function resumeSpeech() {
   if (speechSynthesis.paused) {
     speechSynthesis.resume()
@@ -319,22 +462,17 @@ export function resumeSpeech() {
   }
 }
 
-// Check if speaking
 export function isSpeaking() {
   return speechSynthesis.speaking
 }
 
-// Check if paused
 export function isPaused() {
   return speechSynthesis.paused
 }
 
-// Set voice volume
 export function setVoiceVolume(volume) {
-  // This would need a different approach with AudioContext for real volume control
 }
 
-// Set music volume
 export function setMusicVolume(volume) {
   if (backgroundMusicNode) {
     backgroundMusicNode.gainNode.gain.value = volume
