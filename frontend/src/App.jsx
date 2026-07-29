@@ -18,6 +18,7 @@ import SubscriptionPage from './pages/SubscriptionPage'
 import SettingsPage from './pages/SettingsPage'
 import AdminUsersPage from './pages/admin/AdminUsersPage'
 import AdminAnalyticsPage from './pages/admin/AdminAnalyticsPage'
+import VideoStudioPage from './pages/VideoStudioPage'
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth()
@@ -80,6 +81,7 @@ function App() {
                 <Route path="settings" element={<SettingsPage />} />
                 <Route path="admin/users" element={<AdminUsersPage />} />
                 <Route path="admin/analytics" element={<AdminAnalyticsPage />} />
+                <Route path="studio" element={<VideoStudioPage />} />
               </Route>
 
               {/* Catch all */}

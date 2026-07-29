@@ -11,6 +11,7 @@ import {
   Users,
   Sparkles,
   FileText,
+  Film,
   X,
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
@@ -19,6 +20,7 @@ import Avatar from '../ui/Avatar'
 const navItems = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/generator', icon: Wand2, label: 'AI Generator' },
+  { to: '/studio', icon: Film, label: 'Video Studio' },
   { to: '/library', icon: BookOpen, label: 'Content Library' },
   { to: '/calendar', icon: Calendar, label: 'Content Calendar' },
   { to: '/rewrite', icon: FileText, label: 'Rewrite Tools' },
