@@ -370,11 +370,28 @@ function generatePiano(t, duration) {
   return (note1 + note2 + note3) * decay * mod
 }
 
-export function playBackgroundMusic(duration = 30, genre = 'cinematic') {
+export function playBackgroundMusic(duration = 30, genre = 'cinematic', sceneSyncPoints = null) {
   if (!audioContext) {
     audioContext = new (window.AudioContext || window.webkitAudioContext)()
   }
   stopBackgroundMusic()
+
+  if (sceneSyncPoints && sceneSyncPoints.length > 0) {
+    const buffer = createSceneSyncedMusic(duration, genre, sceneSyncPoints)
+    const source = audioContext.createBufferSource()
+    source.buffer = buffer
+
+    const gainNode = audioContext.createGain()
+    gainNode.gain.value = 0.3
+
+    source.connect(gainNode)
+    gainNode.connect(audioContext.destination)
+    source.start()
+    backgroundMusicNode = { source, gainNode }
+    isBackgroundPlaying = true
+    source.onended = () => { isBackgroundPlaying = false }
+    return
+  }
 
   const buffer = createBackgroundMusic(duration, genre)
   const source = audioContext.createBufferSource()
@@ -389,6 +406,75 @@ export function playBackgroundMusic(duration = 30, genre = 'cinematic') {
   backgroundMusicNode = { source, gainNode }
   isBackgroundPlaying = true
   source.onended = () => { isBackgroundPlaying = false }
+}
+
+function createSceneSyncedMusic(totalDuration, baseGenre, syncPoints) {
+  const sampleRate = audioContext.sampleRate
+  const samples = sampleRate * totalDuration
+  const buffer = audioContext.createBuffer(2, samples, sampleRate)
+  const leftChannel = buffer.getChannelData(0)
+  const rightChannel = buffer.getChannelData(1)
+
+  for (let i = 0; i < samples; i++) {
+    const t = i / sampleRate
+    let sample = 0
+
+    let currentScene = syncPoints[0]
+    for (const sp of syncPoints) {
+      if (t >= sp.timeSeconds && t < sp.timeSeconds + sp.durationSeconds) {
+        currentScene = sp
+        break
+      }
+    }
+
+    const sceneMood = currentScene?.mood || 'neutral'
+    const sceneGenre = adjustGenreForMood(baseGenre, sceneMood)
+    const sceneStart = currentScene?.timeSeconds || 0
+    const sceneDur = currentScene?.durationSeconds || totalDuration
+    const sceneT = t - sceneStart
+
+    switch (sceneGenre) {
+      case 'cinematic': sample = generateCinematic(sceneT, sceneDur); break
+      case 'corporate': sample = generateCorporate(sceneT, sceneDur); break
+      case 'upbeat': sample = generateUpbeat(sceneT, sceneDur); break
+      case 'luxury': sample = generateLuxury(sceneT, sceneDur); break
+      case 'modern': sample = generateModern(sceneT, sceneDur); break
+      case 'jazz': sample = generateJazz(sceneT, sceneDur); break
+      case 'electronic': sample = generateElectronic(sceneT, sceneDur); break
+      case 'acoustic': sample = generateAcoustic(sceneT, sceneDur); break
+      case 'drone': sample = generateDrone(sceneT, sceneDur); break
+      case 'piano': sample = generatePiano(sceneT, sceneDur); break
+      default: sample = 0
+    }
+
+    let sceneEnvelope = 1
+    const fadeLen = 0.3
+    if (sceneT < fadeLen) sceneEnvelope = sceneT / fadeLen
+    if (sceneT > sceneDur - fadeLen) sceneEnvelope = (sceneDur - sceneT) / fadeLen
+
+    const fadeTime = 1.5
+    let masterEnvelope = 1
+    if (t < fadeTime) masterEnvelope = t / fadeTime
+    if (t > totalDuration - fadeTime) masterEnvelope = (totalDuration - t) / fadeTime
+
+    const finalSample = sample * sceneEnvelope * masterEnvelope * 0.4
+    leftChannel[i] = finalSample
+    rightChannel[i] = finalSample * (0.95 + Math.random() * 0.05)
+  }
+
+  return buffer
+}
+
+function adjustGenreForMood(baseGenre, mood) {
+  if (mood === 'confident' || mood === 'bold') return 'cinematic'
+  if (mood === 'warm' || mood === 'friendly') return 'acoustic'
+  if (mood === 'energetic' || mood === 'excited') return 'upbeat'
+  if (mood === 'sophisticated' || mood === 'prestigious') return 'luxury'
+  if (mood === 'serious' || mood === 'concerned' || mood === 'urgent') return 'drone'
+  if (mood === 'playful' || mood === 'fun' || mood === 'delighted') return 'modern'
+  if (mood === 'calm' || mood === 'peaceful') return 'piano'
+  if (mood === 'dramatic' || mood === 'powerful') return 'cinematic'
+  return baseGenre
 }
 
 export function stopBackgroundMusic() {
@@ -414,6 +500,7 @@ export function speak(text, profileId = 'radio-presenter', options = {}) {
     musicVolume = 0.3,
     useReverb = false,
     useEcho = false,
+    sceneSyncPoints = null,
   } = options
 
   stopSpeech()
@@ -443,7 +530,7 @@ export function speak(text, profileId = 'radio-presenter', options = {}) {
   }
 
   if (withMusic && musicGenre !== 'none') {
-    playBackgroundMusic(30, musicGenre)
+    playBackgroundMusic(30, musicGenre, sceneSyncPoints)
     if (backgroundMusicNode) {
       backgroundMusicNode.gainNode.gain.value = musicVolume
     }

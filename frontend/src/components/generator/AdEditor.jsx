@@ -8,7 +8,7 @@ import {
 import {
   generateAdVideo, createVideoUrl, getScenesForContent
 } from '../../lib/video'
-import { getSceneTimings, generateVoiceoverScript } from '../../lib/scriptWriter'
+import { getSceneTimings, generateVoiceoverScript, getMusicSyncPoints } from '../../lib/scriptWriter'
 import VideoPlayer from './VideoPlayer'
 import StoryboardView from './StoryboardView'
 import {
@@ -88,8 +88,10 @@ export default function AdEditor({ content: initialContent, script: initialScrip
       }
     }
     sceneTimerRef.current = setTimeout(updateCaption, (activeScenes[0]?.duration || 5) * 1000)
+    const syncPoints = scenes.length > 0 ? getMusicSyncPoints({ scenes, totalDuration: totalDuration }) : null
     speak(textToSpeak, selectedVoice, {
       withMusic, musicGenre, voiceVolume, musicVolume, useReverb, useEcho,
+      sceneSyncPoints: syncPoints,
       onEnd: () => { setSpeaking(false); setAdPlaying(false); setCurrentCaption(''); clearTimeout(sceneTimerRef.current) },
     })
     setSpeaking(true); setAdPlaying(true)
@@ -146,6 +148,7 @@ export default function AdEditor({ content: initialContent, script: initialScrip
       sceneTimerRef.current = setTimeout(updateCaption, (activeScenes[0]?.duration || 5) * 1000)
       speak(content || scenes.map(s => s.narration).filter(Boolean).join('. '), selectedVoice, {
         withMusic, musicGenre, voiceVolume, musicVolume, useReverb, useEcho,
+        sceneSyncPoints: scenes.length > 0 ? getMusicSyncPoints({ scenes, totalDuration: totalDuration }) : null,
         onEnd: () => { setSpeaking(false); setCurrentCaption(''); clearTimeout(sceneTimerRef.current); setAdPlaying(false) },
       })
       setSpeaking(true)
