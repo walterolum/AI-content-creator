@@ -6,48 +6,75 @@ const genAI = hasApiKey ? new GoogleGenerativeAI(config.google.apiKey) : null
 
 console.log('Gemini API configured:', hasApiKey ? 'Yes' : 'Demo mode (no valid API key)')
 
-const SYSTEM_PROMPT = `You are an expert social media content creator and marketing strategist.
-You create engaging, platform-optimized content for businesses of all types.
-You always include relevant hashtags, emojis, and compelling calls-to-action.
-Your content is creative, professional, and tailored to the target audience.
-Always format your response with clear sections using markdown headers.`
-
-// Demo content generator for testing without API key
 function generateDemoContent(params) {
-  const { businessType, platform, tone, goal, audience, length, language, topic } = params
+  const { businessType, platform, tone, goal, audience, language, topic, keywords } = params
 
-  const demoContent = `
-# ${topic || 'Social Media Post'}
+  const toneMap = {
+    professional: { adj: 'professional and polished', adv: 'authoritatively' },
+    friendly: { adj: 'warm and inviting', adv: 'warmly' },
+    luxury: { adj: 'premium and sophisticated', adv: 'elegantly' },
+    funny: { adj: 'witty and fun', adv: 'playfully' },
+    inspirational: { adj: 'uplifting and motivational', adv: 'inspiringly' },
+    persuasive: { adj: 'convincing and compelling', adv: 'persuasively' },
+    educational: { adj: 'informative and clear', adv: 'clearly' },
+    corporate: { adj: 'formal and business-like', adv: 'formally' },
+    youthful: { adj: 'fresh and energetic', adv: 'energetically' },
+  }
 
-## Hook
-Discover something amazing today! This is what you've been waiting for. ✨
+  const goalMap = {
+    sales: 'drive immediate purchases',
+    engagement: 'spark conversation and interaction',
+    awareness: 'build brand recognition',
+    'lead-generation': 'generate qualified leads',
+    'website-traffic': 'drive clicks to their website',
+    'brand-growth': 'strengthen brand loyalty and reach',
+  }
 
-## Caption
-We're excited to share our latest ${topic || 'update'} with you! As a trusted ${businessType}, we believe in delivering the best to our ${audience} community. ${tone === 'friendly' ? 'We love seeing your smiles!' : tone === 'luxury' ? 'Experience excellence like never before.' : 'Quality you can trust.'}
+  const t = toneMap[tone] || toneMap.professional
+  const goalDesc = goalMap[goal] || 'engage their audience'
+  const aud = audience || 'everyone'
+  const kw = keywords && keywords !== 'none' ? ` emphasizing "${keywords}"` : ''
 
-Whether you're looking for reliability, quality, or innovation - we've got you covered. Our team has been working hard to bring you something special.
+  const hooks = {
+    sales: `Ready to transform your experience? ${topic ? topic + ' delivers' : 'We deliver'} results that speak for themselves.`,
+    engagement: `Hey ${aud} — here's something you'll love!`,
+    awareness: `Have you heard about ${topic || businessType + '?'} It's time to pay attention.`,
+    'lead-generation': `Looking for the best ${businessType} solution? Your search ends here.`,
+    'website-traffic': `Curious what everyone's talking about? Click through to discover ${topic || 'something amazing'}.`,
+    'brand-growth': `Join thousands who trust ${topic || businessType} for quality and care.`,
+  }
 
-## Call-to-Action
-👉 Don't miss out! Visit us today or click the link in bio to learn more. Tag someone who needs to see this!
+  const problems = {
+    sales: `Tired of options that overpromise and underdeliver?`,
+    engagement: `We know finding what truly works can be tough — but it doesn't have to be.`,
+    awareness: `Most people settle for less. But you deserve better.`,
+    'lead-generation': `Stop wasting time on solutions that don't fit your needs.`,
+    'website-traffic': `Don't let great opportunities pass you by while you're stuck searching.`,
+    'brand-growth': `It's frustrating when brands don't listen. We hear you.`,
+  }
 
-## Hashtags
-#${businessType.replace(/\s+/g, '')} #SocialMedia #Marketing #ContentCreator #${platform}Marketing #BusinessGrowth #${topic ? topic.replace(/\s+/g, '') : 'Content'} #DigitalMarketing #BrandAwareness #Community #Love
+  const solutions = {
+    sales: `${topic || 'Our ' + businessType} offers exactly what you need${kw} — quality you can feel, value you can trust.`,
+    engagement: `We make it easy with ${t.adj} content that speaks directly to ${aud}.`,
+    awareness: `${topic || 'Our ' + businessType} stands out with unmatched quality and care${kw}.`,
+    'lead-generation': `With our tailored approach, you get solutions built for ${aud}.`,
+    'website-traffic': `Everything you need is just one click away${kw}. See why people love us.`,
+    'brand-growth': `We're committed to delivering excellence${kw} — and our community feels it.`,
+  }
 
-## Emoji Suggestions
-✨ 🔥 💜 👉 🎯 ⭐ 💡 🚀
+  const ctas = {
+    sales: `Limited spots available. ${tone === 'luxury' ? 'Book your exclusive session now.' : 'Get yours today!'}`,
+    engagement: `Drop a comment and let us know what you think!`,
+    awareness: `Follow along and be part of something${tone === 'corporate' ? ' exceptional.' : ' amazing.'}`,
+    'lead-generation': `Sign up now and see the difference for yourself.`,
+    'website-traffic': `Tap the link in bio and see what's waiting for you.`,
+    'brand-growth': `Join our community today — you belong here.`,
+  }
 
-## Image Prompt
-A vibrant, professional photo featuring ${businessType} products/services with warm lighting, modern aesthetic, and ${tone} vibes. Clean background with subtle branding elements.
-
-## Story Ideas
-1. Behind-the-scenes of how we create our ${topic || 'products'}
-2. Customer spotlight: Share a success story from our community
-3. Quick tips related to ${businessType} that your audience will love
-
-## Poll Questions
-1. "What's your favorite thing about our ${businessType}?" - Options: Quality / Price / Service / All of the above
-2. "Would you like to see more content about?" - Options: Tips & Tricks / Product Reviews / Behind the Scenes / Customer Stories
-`
+  const demoContent = `${hooks[goal] || hooks.engagement}
+${problems[goal] || problems.engagement}
+${solutions[goal] || solutions.sales}
+${ctas[goal] || ctas.engagement}`
 
   return demoContent
 }
@@ -64,54 +91,38 @@ async function generateContent(params, onChunk) {
     topic,
     keywords,
     additionalInfo,
+    systemPrompt,
+    maxStatements,
   } = params
+
+  const frontendPrompt = systemPrompt
 
   // Demo mode - no API key needed
   if (!genAI) {
     console.log('Using demo mode for content generation')
-    const demoContent = generateDemoContent(params)
+    const demoContent = generateDemoContent({
+      businessType, platform, tone, goal, audience, length, language, topic, keywords,
+    })
 
     // Simulate streaming by sending content in chunks
-    const lines = demoContent.split('\n')
-    for (const line of lines) {
+    const words = demoContent.split(' ')
+    for (const word of words) {
       if (onChunk) {
-        onChunk(line + '\n')
+        onChunk(word + ' ')
       }
-      // Small delay to simulate streaming
-      await new Promise(resolve => setTimeout(resolve, 50))
+      await new Promise(resolve => setTimeout(resolve, 80))
     }
     return
   }
 
-  // Real API call with Gemini
-  const prompt = `Create a ${length} ${tone} social media post for a ${businessType} business on ${platform}.
-
-Topic/Purpose: ${topic}
-Goal: ${goal}
-Target Audience: ${audience}
-Language: ${language}
-${keywords ? `Keywords to include: ${keywords}` : ''}
-${additionalInfo ? `Additional context: ${additionalInfo}` : ''}
-
-Please generate:
-1. A compelling hook (first line that stops the scroll)
-2. A full caption/post body
-3. A strong call-to-action (CTA)
-4. 10-15 relevant hashtags
-5. Emoji suggestions
-6. Image/visual prompt suggestion for this post
-7. 3 related story/reel ideas
-8. 2 poll question ideas for engagement
-
-Make it platform-optimized for ${platform}.`
-
-  console.log('Generating content with Gemini:', { businessType, platform, tone, topic })
+  // Real API call with Gemini — use the frontend's prompt directly
+  console.log('Generating ad content with Gemini:', { businessType, platform, tone, topic })
 
   try {
     const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' })
 
     const result = await model.generateContentStream(
-      `${SYSTEM_PROMPT}\n\n${prompt}`
+      frontendPrompt
     )
 
     console.log('Stream started successfully')

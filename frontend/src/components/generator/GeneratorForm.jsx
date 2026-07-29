@@ -112,19 +112,20 @@ export default function GeneratorForm() {
       const prompt = `Generate a ${data.tone} advertisement for ${data.businessType} on ${data.platform}.
 Topic: ${data.topic}
 Keywords: ${data.keywords || 'none'}
-Goal: ${data.goal}
+Goal: ${data.goal} — ${data.goal === 'sales' ? 'drive purchases' : data.goal === 'engagement' ? 'spark conversation' : data.goal === 'awareness' ? 'build recognition' : data.goal === 'lead-generation' ? 'generate leads' : data.goal === 'website-traffic' ? 'drive traffic' : 'grow the brand'}
 Audience: ${data.audience}
 Language: ${data.language}
-Length: ${data.length}
-Additional: ${data.additionalInfo || 'none'}
+Tone: ${data.tone}
 
-IMPORTANT RULES:
-- Write EXACTLY ${MAX_STATEMENTS} concise statements (no more, no less).
-- Each statement must be a complete, persuasive sentence.
-- Structure: Hook statement, Problem statement, Solution statement, Call-to-action statement.
-- Total must fit within a 30-second voiceover.
-- Do NOT include hashtags, markdown, or section headers.
-- Write in ${data.language}.`
+CRITICAL RULES — YOU MUST FOLLOW EVERY RULE:
+1. Write EXACTLY ${MAX_STATEMENTS} short, punchy statements (no more, no less).
+2. Each statement must be ONE short, catchy sentence — maximum 15 words each.
+3. Every statement must match the "${data.tone}" tone and speak directly to "${data.audience}" audience.
+4. Every statement must serve the goal "${data.goal}" — each line must help achieve this goal.
+5. Structure: Hook → Problem → Solution → Call-to-Action.
+6. Total must fit in a 30-second voiceover (keep it tight).
+7. Do NOT use hashtags, markdown, section headers, or emojis unless the tone is "funny" or "youthful".
+8. Write in ${data.language}.`
 
       await streamAI('/ai/generate', { ...data, systemPrompt: prompt, maxStatements: MAX_STATEMENTS }, (chunk) => {
         setGeneratedContent(prev => prev + chunk)
